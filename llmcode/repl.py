@@ -1489,7 +1489,7 @@ class Repl:
         # expand=False panel.)
         self.console.print(Align.center(Panel(
             Group(head, sub), box=box.ROUNDED, border_style=pal.accent,
-            title="llmcode", title_align="left", padding=(0, 1),
+            title="llmc-code", title_align="left", padding=(0, 1),
             expand=False,  # hug the content instead of spanning the full width
         )))
         # Keep the privacy posture visible on startup (security transparency),
@@ -2552,7 +2552,7 @@ class Repl:
     def _cmd_doctor(self, arg: str) -> None:
         """Run environment/health checks and print pass/✗ with fix hints."""
         cwd = os.getcwd()
-        self._ok("llmcode doctor:")
+        self._ok("llmc-code doctor:")
         success_style = palette_for(self.config.theme).success
 
         def _line(ok: bool, label: str, detail: str = "") -> None:

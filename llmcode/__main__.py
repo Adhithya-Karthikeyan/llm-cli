@@ -53,7 +53,7 @@ from .tools import set_private
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
-        prog="llmcode",
+        prog="llmc-code",
         description="A lightweight, personal agentic CLI for LOCAL LLMs (LM Studio).",
     )
     parser.add_argument(
