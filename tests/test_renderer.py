@@ -9,15 +9,15 @@ from __future__ import annotations
 
 import pytest
 
-from llmcli.agent import (
+from llmcode.agent import (
     Agent,
     display_name,
     error_summary,
     result_summary,
     tool_call_label,
 )
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL
 
 
 # ----- DisplayName mapping -------------------------------------------------
@@ -450,7 +450,7 @@ def test_footer_not_bold_cyan_with_highlight_off(tmp_workspace):
 
 def test_make_console_disables_highlight():
     """repl._make_console must build a non-highlighting console."""
-    from llmcli.repl import _make_console
+    from llmcode.repl import _make_console
 
     console = _make_console()
     assert console._highlight is False  # ReprHighlighter disabled
@@ -462,8 +462,8 @@ def test_make_console_disables_highlight():
 def test_make_console_ansi_uses_standard_color_system(monkeypatch):
     """theme='ansi' pins the 16-color STANDARD system for a TTY; auto is not."""
     from rich.color import ColorSystem
-    import llmcli.repl as r
-    from llmcli.repl import _make_console
+    import llmcode.repl as r
+    from llmcode.repl import _make_console
 
     # The ansi theme pins color_system="standard" ONLY for a real terminal, so
     # force the tty check on (under pytest stdout is captured / not a tty).
@@ -491,7 +491,7 @@ def test_make_console_ansi_non_tty_stays_ansi_free(tmp_workspace):
     emits clean, escape-free text — same as the auto theme when piped."""
     import io
     from rich.console import Console
-    import llmcli.repl as r
+    import llmcode.repl as r
 
     # Build the console exactly as _make_console would for a non-tty ansi run:
     # _stdout_is_tty() is False under pytest, so it returns the auto-detect
@@ -511,14 +511,14 @@ def test_make_console_ansi_non_tty_stays_ansi_free(tmp_workspace):
 
 
 def test_code_theme_for_helper():
-    from llmcli.repl import _code_theme_for
+    from llmcode.repl import _code_theme_for
 
     assert _code_theme_for("ansi") == "ansi_dark"
     assert _code_theme_for("auto") == "monokai"
 
 
 def test_agent_default_code_theme_is_monokai():
-    from llmcli.agent import Agent
+    from llmcode.agent import Agent
 
     a = Agent(provider=MockProvider(), system_prompt="s", tool_names=[])
     assert a.code_theme == "monokai"
@@ -527,8 +527,8 @@ def test_agent_default_code_theme_is_monokai():
 def test_agent_uses_ansi_dark_when_built_for_ansi_theme():
     """The orchestrator built under the ansi theme passes code_theme=ansi_dark
     to its Agent (and threads it to spawned sub-agents)."""
-    from llmcli.config import Config
-    from llmcli.repl import _build_orchestrator, _make_console
+    from llmcode.config import Config
+    from llmcode.repl import _build_orchestrator, _make_console
 
     cfg = Config(provider="mock", theme="ansi")
     agent = _build_orchestrator(
@@ -587,7 +587,7 @@ def test_make_console_orange_inline_code_has_no_background_box():
     """THE key assertion: orange theme's markdown.code has NO bgcolor, so inline
     code renders as orange TEXT with no grey/black background box (rich's
     default markdown.code box is removed)."""
-    from llmcli.repl import _make_console, _ORANGE
+    from llmcode.repl import _make_console, _ORANGE
 
     style = _make_console("orange").get_style("markdown.code")
     assert style.bgcolor is None  # no box
@@ -601,7 +601,7 @@ def test_make_console_orange_inline_code_has_no_background_box():
 def test_make_console_orange_leaves_other_themes_unchanged():
     """orange is purely additive: auto and ansi keep rich's default
     markdown.code (which HAS a bgcolor box) — we did not alter them."""
-    from llmcli.repl import _make_console
+    from llmcode.repl import _make_console
 
     assert _make_console("auto").get_style("markdown.code").bgcolor is not None
     assert _make_console("ansi").get_style("markdown.code").bgcolor is not None
@@ -609,7 +609,7 @@ def test_make_console_orange_leaves_other_themes_unchanged():
 
 def test_orange_in_themes_and_load_config_accepts_it(tmp_path):
     import json
-    from llmcli.config import DEFAULT_THEME, THEMES, load_config
+    from llmcode.config import DEFAULT_THEME, THEMES, load_config
 
     assert "orange" in THEMES
     good = tmp_path / "ok.json"
@@ -623,7 +623,7 @@ def test_orange_in_themes_and_load_config_accepts_it(tmp_path):
 
 def test_code_theme_for_orange_is_a_valid_pygments_style():
     from pygments.styles import get_style_by_name
-    from llmcli.repl import _code_theme_for
+    from llmcode.repl import _code_theme_for
 
     name = _code_theme_for("orange")
     get_style_by_name(name)  # must not raise
@@ -633,7 +633,7 @@ def test_code_theme_for_orange_is_a_valid_pygments_style():
 # ----- theme: AMBER (the polished default — banner, gutter, gold bold) --------
 
 def test_clean_is_default_theme():
-    from llmcli.config import DEFAULT_THEME, THEMES, Config
+    from llmcode.config import DEFAULT_THEME, THEMES, Config
 
     assert DEFAULT_THEME == "clean"
     assert "clean" in THEMES
@@ -646,8 +646,8 @@ def test_clean_theme_registered_and_selectable(tmp_path):
     builds a console, has a palette, and maps to a valid pygments code theme."""
     import json
     from pygments.styles import get_style_by_name
-    from llmcli.config import THEMES, load_config
-    from llmcli.repl import _make_console, _code_theme_for, palette_for
+    from llmcode.config import THEMES, load_config
+    from llmcode.repl import _make_console, _code_theme_for, palette_for
 
     assert "clean" in THEMES
     p = tmp_path / "config.json"
@@ -663,7 +663,7 @@ def test_clean_theme_registered_and_selectable(tmp_path):
 
 def test_make_console_clean_inline_code_has_no_background_box():
     """Clean inline code is grey TEXT with NO bgcolor box (minimal, no boxes)."""
-    from llmcli.repl import _make_console
+    from llmcode.repl import _make_console
 
     style = _make_console("clean").get_style("markdown.code")
     assert style.bgcolor is None  # no box
@@ -672,7 +672,7 @@ def test_make_console_clean_inline_code_has_no_background_box():
 
 def test_make_console_amber_inline_code_has_no_background_box():
     """Amber inline code is orange TEXT with NO bgcolor box (mirrors orange)."""
-    from llmcli.repl import _make_console, _AMBER
+    from llmcode.repl import _make_console, _AMBER
 
     style = _make_console("amber").get_style("markdown.code")
     assert style.bgcolor is None  # no box
@@ -684,7 +684,7 @@ def test_make_console_amber_inline_code_has_no_background_box():
 
 def test_amber_strong_is_gold():
     """**bold** words render in GOLD so important words pop."""
-    from llmcli.repl import _make_console, _AMBER_GOLD
+    from llmcode.repl import _make_console, _AMBER_GOLD
 
     style = _make_console("amber").get_style("markdown.strong")
     assert style.bold is True
@@ -694,7 +694,7 @@ def test_amber_strong_is_gold():
 
 def test_code_theme_for_amber_is_valid_pygments():
     from pygments.styles import get_style_by_name
-    from llmcli.repl import _code_theme_for
+    from llmcode.repl import _code_theme_for
 
     name = _code_theme_for("amber")
     get_style_by_name(name)  # must not raise
@@ -702,7 +702,7 @@ def test_code_theme_for_amber_is_valid_pygments():
 
 
 def test_palette_for_known_and_unknown():
-    from llmcli.repl import palette_for
+    from llmcode.repl import palette_for
 
     amber = palette_for("amber")
     assert amber.accent == "#ff9e3d"
@@ -848,7 +848,7 @@ def test_left_heading_not_centered(tmp_workspace):
     """build_answer_markdown left-aligns headings (rich centers h1 by default)."""
     import io
     from rich.console import Console
-    from llmcli.agent import build_answer_markdown
+    from llmcode.agent import build_answer_markdown
 
     buf = io.StringIO()
     console = Console(markup=False, highlight=False, file=buf, force_terminal=False, width=60)
@@ -860,8 +860,8 @@ def test_left_heading_not_centered(tmp_workspace):
 
 def test_build_orchestrator_threads_accent_and_gutter():
     """The orchestrator (and its sub-agents) get the theme's accent + gutter."""
-    from llmcli.config import Config
-    from llmcli.repl import _build_orchestrator, _make_console
+    from llmcode.config import Config
+    from llmcode.repl import _build_orchestrator, _make_console
 
     cfg = Config(provider="mock", theme="amber")
     agent = _build_orchestrator(
@@ -884,7 +884,7 @@ def test_orange_render_emits_orange_fg_and_no_bg_box():
     (38;2;255;158;61) and NO background-color SGR (48;2;) around the code."""
     from rich.console import Console
     from rich.markdown import Markdown
-    from llmcli.repl import _orange_theme, _code_theme_for
+    from llmcode.repl import _orange_theme, _code_theme_for
 
     console = Console(
         theme=_orange_theme(), force_terminal=True, color_system="truecolor",

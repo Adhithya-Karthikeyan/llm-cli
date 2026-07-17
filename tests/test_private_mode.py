@@ -13,13 +13,13 @@ import shutil
 
 import pytest
 
-import llmcli.tools as tools_mod
-from llmcli.config import Config, is_loopback_url, load_config
-from llmcli.orchestration import (
+import llmcode.tools as tools_mod
+from llmcode.config import Config, is_loopback_url, load_config
+from llmcode.orchestration import (
     make_spawn_agent_tool,
     orchestrator_tool_names,
 )
-from llmcli.repl import build_provider
+from llmcode.repl import build_provider
 
 
 # ----- is_loopback_url accept/reject -------------------------------------
@@ -112,7 +112,7 @@ def test_build_provider_allows_non_loopback_when_network_allowed():
 # ----- finding #1: provider connection pinned to the validated loopback IP --
 
 def test_resolve_loopback_ip_pins_literal_and_hostname():
-    from llmcli.config import resolve_loopback_ip
+    from llmcode.config import resolve_loopback_ip
 
     # A literal loopback IP is returned verbatim (no resolution can change it).
     assert resolve_loopback_ip("http://127.0.0.1:1234/v1") == "127.0.0.1"
@@ -124,7 +124,7 @@ def test_resolve_loopback_ip_pins_literal_and_hostname():
 
 
 def test_pin_loopback_base_url_rewrites_hostname_to_literal_ip():
-    from llmcli.providers import _pin_loopback_base_url
+    from llmcode.providers import _pin_loopback_base_url
 
     # A literal-IP base_url needs no rewrite (no re-resolution is possible).
     url, host = _pin_loopback_base_url("http://127.0.0.1:1234/v1")
@@ -139,7 +139,7 @@ def test_pin_loopback_base_url_rewrites_hostname_to_literal_ip():
 
 
 def test_pin_loopback_base_url_fails_closed_on_non_loopback():
-    from llmcli.providers import _pin_loopback_base_url
+    from llmcode.providers import _pin_loopback_base_url
 
     with pytest.raises(ValueError) as exc:
         _pin_loopback_base_url("http://example.com/v1")
@@ -320,7 +320,7 @@ def test_sandbox_allows_local_echo_and_file_op(tmp_workspace, monkeypatch):
 def test_module_private_flag_defaults_off():
     """The process-wide tools flag is network-on by default (set_private flips it)."""
     import importlib
-    import llmcli.tools as fresh
+    import llmcode.tools as fresh
     importlib.reload(fresh)
     assert fresh._PRIVATE is False
 
@@ -337,7 +337,7 @@ def test_default_orchestrator_tools_include_web_fetch():
 
 def test_default_role_tools_include_web_fetch():
     """Sub-agent roles (explorer/coder/reviewer) keep web_fetch by default."""
-    from llmcli.orchestration import _role_tools
+    from llmcode.orchestration import _role_tools
     assert "web_fetch" in _role_tools("explorer", private=False)
     assert "web_fetch" in _role_tools("coder", private=False)
     assert "web_fetch" in _role_tools("reviewer", private=False)
@@ -368,7 +368,7 @@ def test_run_bash_not_sandboxed_by_default(monkeypatch):
 
 def test_mcp_manager_default_is_network_on():
     """A bare MCPManager (no private arg) is network-on, so an unmarked server starts."""
-    from llmcli.mcp import MCPManager
+    from llmcode.mcp import MCPManager
     mgr = MCPManager({"x": {"command": "y", "args": [], "env": {}}})
     assert mgr.private is False
 

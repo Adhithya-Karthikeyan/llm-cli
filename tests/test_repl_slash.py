@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-import llmcli.repl as r
-from llmcli.config import Config
-from llmcli.providers import MockProvider
+import llmcode.repl as r
+from llmcode.config import Config
+from llmcode.providers import MockProvider
 
 
 class _FakeMCP:
@@ -539,7 +539,7 @@ def _run_with_lines(monkeypatch, lines):
     """Drive Repl.run() over a scripted list of input lines, then EOF to exit.
 
     Spies on _submit_or_stage (the model path) and _dispatch_slash (the
-    llmc-command path) so a test can assert which path each line took, without
+    llmcode-command path) so a test can assert which path each line took, without
     touching the network, disk, or a real prompt_toolkit session.
     Returns (repl, submitted_lines, dispatched_lines).
     """
@@ -579,14 +579,14 @@ def _run_with_lines(monkeypatch, lines):
 
 
 def test_known_command_is_dispatched_not_sent_to_model(monkeypatch):
-    # A known llmc command is intercepted and NOT forwarded to the model.
+    # A known llmcode command is intercepted and NOT forwarded to the model.
     repl, submitted, dispatched = _run_with_lines(monkeypatch, ["/help", "/model x"])
     assert dispatched == ["/help", "/model x"]
     assert submitted == []
 
 
 def test_unknown_slash_line_is_sent_to_model(monkeypatch, capsys):
-    # A leading-slash line whose first token is NOT an llmc command (another
+    # A leading-slash line whose first token is NOT an llmcode command (another
     # project's CLI) goes to the model verbatim — no "Unknown command".
     repl, submitted, dispatched = _run_with_lines(monkeypatch, ["/build the project"])
     assert submitted == ["/build the project"]
@@ -595,7 +595,7 @@ def test_unknown_slash_line_is_sent_to_model(monkeypatch, capsys):
 
 
 def test_double_slash_escape_sends_literal_slash_to_model(monkeypatch):
-    # "//model is broken" -> model receives "/model is broken"; llmc's /model
+    # "//model is broken" -> model receives "/model is broken"; llmcode's /model
     # command does NOT run, and the configured model is untouched.
     repl, submitted, dispatched = _run_with_lines(monkeypatch, ["//model is broken"])
     assert submitted == ["/model is broken"]

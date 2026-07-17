@@ -1,4 +1,4 @@
-# llm-cli
+# llmcode
 
 A lightweight, personal **Claude Code-style agentic CLI** in pure Python — for
 **LOCAL LLMs only**.
@@ -18,15 +18,15 @@ Providers:
 ## Install
 
 Install it as a **global command** with [pipx](https://pipx.pypa.io) (or `uv tool`).
-This puts the `llmc` command on your PATH inside an isolated environment, so it
+This puts the `llmcode` command on your PATH inside an isolated environment, so it
 runs from any directory with no venv to activate:
 
 ```bash
-pipx install git+https://github.com/Adhithya-Karthikeyan/llm-cli.git
-# or:  uv tool install git+https://github.com/Adhithya-Karthikeyan/llm-cli.git
+pipx install git+https://github.com/Adhithya-Karthikeyan/llmcode.git
+# or:  uv tool install git+https://github.com/Adhithya-Karthikeyan/llmcode.git
 ```
 
-Then run `llmc` anywhere. Upgrade later with `pipx upgrade llmcli`.
+Then run `llmcode` anywhere. Upgrade later with `pipx upgrade llmcode`.
 
 **Requires Python ≥ 3.10.**
 
@@ -38,25 +38,25 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-This installs the `llmc` console script. You can also run it as a module with
-`python -m llmcli`.
+This installs the `llmcode` console script. You can also run it as a module with
+`python -m llmcode`.
 
 ## Usage
 
 Interactive REPL (uses your saved provider/model, defaults to `local`):
 
 ```bash
-llmc                       # or: python -m llmcli
-llmc --provider mock       # offline, scripted demo
-llmc --provider local --model <your-lm-studio-model-id>
+llmcode                       # or: python -m llmcode
+llmcode --provider mock       # offline, scripted demo
+llmcode --provider local --model <your-lm-studio-model-id>
 ```
 
 One-shot, non-interactive (`--yes` auto-confirms dangerous tools so it runs
 unattended):
 
 ```bash
-llmc --provider mock --yes -p "create hello.py that prints hi and run it"
-llmc -p "explain what this repo does"
+llmcode --provider mock --yes -p "create hello.py that prints hi and run it"
+llmcode -p "explain what this repo does"
 ```
 
 Flags:
@@ -72,11 +72,11 @@ Flags:
 | `--max-iterations <n>` | Cap provider turns per message (use `>=2` for tool tasks) |
 | `--effort <level>` | Reasoning effort: off\|low\|medium\|high (best-effort) |
 | `--theme <name>` | Color theme: `amber` (**default**, warm polished look) \| `auto` (truecolor) \| `ansi` (Dark mode, ANSI colors only) \| `orange`. Session-only unless `--save` |
-| `--mcp {on,off}` | Enable/disable MCP servers (`~/.llm-cli/mcp.json`). `off` starts no servers and sends no MCP tools — smaller prompt, faster tok/s. Session-only unless `--save` |
-| `--context N\|auto\|fixed\|off` | Working-context budget (~tokens). llmcli auto-trims history to it after each turn so decode stays fast; adaptive (flexes per request) by default. Session-only unless `--save` |
+| `--mcp {on,off}` | Enable/disable MCP servers (`~/.llmcode/mcp.json`). `off` starts no servers and sends no MCP tools — smaller prompt, faster tok/s. Session-only unless `--save` |
+| `--context N\|auto\|fixed\|off` | Working-context budget (~tokens). llmcode auto-trims history to it after each turn so decode stays fast; adaptive (flexes per request) by default. Session-only unless `--save` |
 | `--private` | **Opt into the offline lockdown** for this session: no external egress (see below). Add `--save` to persist |
 | `--allow-network` | Accepted **no-op alias** for back-compat (network is already the default). Explicitly keeps network on. Add `--save` to persist |
-| `--save` | Persist the given flags as the new default in `~/.llm-cli/config.json` |
+| `--save` | Persist the given flags as the new default in `~/.llmcode/config.json` |
 
 ### Slash commands (in the REPL)
 
@@ -90,7 +90,7 @@ Flags:
 /compact              Aggressively summarize ALL history into one tight note,
                       keeping only the last exchange (frees the most context)
 /context [N|auto|fixed|off]
-                      Working-context budget — llmcli auto-trims history to this
+                      Working-context budget — llmcode auto-trims history to this
                       after each turn so decode stays fast. auto = flex per
                       request (default); fixed = flat N; off = trim only near
                       the model's window. Persisted.
@@ -108,7 +108,7 @@ Ctrl+O                Reveal full detail (args+results) of the last turn
 
 ## Session memory
 
-llm-cli remembers the conversation **per project directory** (Claude-Code-style:
+llmcode remembers the conversation **per project directory** (Claude-Code-style:
 auto-save, opt-in resume), so you can pick up where you left off.
 
 - **Auto-save.** After every completed turn (and on a clean exit) the running
@@ -125,7 +125,7 @@ auto-save, opt-in resume), so you can pick up where you left off.
   `--continue`** to load it before the first turn. **`/forget`** deletes this
   project's saved session.
 - **Where + privacy.** Sessions are stored **locally only**, as JSON under
-  `~/.llm-cli/sessions/<dir>-<hash>.json`, keyed by the absolute path of the
+  `~/.llmcode/sessions/<dir>-<hash>.json`, keyed by the absolute path of the
   directory. They are **never sent anywhere**. The saved conversation may include
   file contents the model read while working — fine for a local tool, but the
   file stays on your machine. When you resume, the model-aware auto-compaction
@@ -136,7 +136,7 @@ history first — so an unattended one-shot can build on itself across runs.
 
 ## Networking & safety (default: network enabled)
 
-llm-cli runs **network-enabled by default**: `web_fetch` is available, `run_bash`
+llmcode runs **network-enabled by default**: `web_fetch` is available, `run_bash`
 can reach the network, a non-loopback `base_url` is allowed, all configured MCP
 servers start, and proxy env vars are honored. The startup banner and the REPL
 status line show the active state: `private mode: OFF — network enabled` (or
@@ -175,7 +175,7 @@ above:
   other than `127.0.0.0/8`, `::1`, or `localhost`) is **REFUSED with a clear
   error — never silently used**, and the loopback host is **IP-pinned**. Validated
   at all three entry points: the `--base-url` flag, the persisted
-  `~/.llm-cli/config.json`, and every in-session rebuild (`/provider`, `/model`,
+  `~/.llmcode/config.json`, and every in-session rebuild (`/provider`, `/model`,
   `/effort`).
 - **`web_fetch` is removed from the tool set.** The model can't even call it (and
   a direct call is refused).
@@ -204,12 +204,12 @@ above:
 
 ## MCP (Model Context Protocol)
 
-llm-cli can connect to local **MCP servers** over the **stdio transport** and
+llmcode can connect to local **MCP servers** over the **stdio transport** and
 expose their tools to the agent — a stdlib-only, synchronous JSON-RPC 2.0 client
 (no `mcp` SDK, no new dependencies).
 
 It is **opt-in**: with no config file, MCP is simply off and nothing changes.
-To enable it, create `~/.llm-cli/mcp.json` in the Claude Desktop format:
+To enable it, create `~/.llmcode/mcp.json` in the Claude Desktop format:
 
 ```json
 {
@@ -296,7 +296,7 @@ The CLI presents like a senior engineer: terse and skimmable.
   is piped or not a TTY (one-shot in a pipe, captured tests), so it never leaks
   stray characters into redirected output. It always erases its own line before
   any real output (the answer, the collapsed tool line, the footer, or a `y/N`
-  confirm prompt). Set `LLMCLI_NO_SPINNER=1` to turn the duck off on a TTY too.
+  confirm prompt). Set `LLMCODE_NO_SPINNER=1` to turn the duck off on a TTY too.
 - **`/compact`** — summarizes the conversation so far via the active provider into
   a compact context note (preserving decisions, files touched, open tasks, key
   facts), replaces the long history with `[system summary + the last 1–2 turns]`,
@@ -309,10 +309,10 @@ The CLI presents like a senior engineer: terse and skimmable.
    gives the best results).
 2. Start its **local server** (Developer tab → Start Server). It exposes an
    OpenAI-compatible API at `http://localhost:1234/v1` by default.
-3. Point llm-cli at it:
+3. Point llmcode at it:
 
    ```bash
-   llmc --provider local --model <the-model-id> --base-url http://localhost:1234/v1
+   llmcode --provider local --model <the-model-id> --base-url http://localhost:1234/v1
    ```
 
 The API key is read from `OPENAI_API_KEY` or `LMSTUDIO_API_KEY`, defaulting to the
@@ -335,7 +335,7 @@ parsing a fenced ` ```json ` tool-call block from the model's text output:
 ### Mock (offline)
 
 ```bash
-llmc --provider mock --yes -p "create hello.py that prints hi and run it"
+llmcode --provider mock --yes -p "create hello.py that prints hi and run it"
 ```
 
 The mock provider is deterministic and needs no keys or network. Its `hello`
@@ -357,8 +357,8 @@ The "intelligence" is emergent from three things working together:
 ### Architecture
 
 ```
-llmcli/
-  config.py         Settings, LM Studio defaults, ~/.llm-cli/config.json persistence
+llmcode/
+  config.py         Settings, LM Studio defaults, ~/.llmcode/config.json persistence
   prompts.py        System prompts: ORCHESTRATOR, EXPLORER, CODER, REVIEWER
   tools.py          Tool registry: read_file (offset/limit), write_file, edit_file, run_bash, glob, grep, repo_map
   audit.py          Map-reduce /audit: chunk the repo, review each chunk in an isolated context, merge
@@ -368,7 +368,7 @@ llmcli/
   orchestration.py  spawn_agent delegation tool + role toolsets
   mcp.py            stdio MCP client + manager (sync JSON-RPC 2.0, stdlib only)
   repl.py           prompt_toolkit input + rich streamed output; provider factory
-  __main__.py       CLI: flags, one-shot -p mode, `llmc` entry point
+  __main__.py       CLI: flags, one-shot -p mode, `llmcode` entry point
 tests/              pytest suite (MockProvider only; no network)
 ```
 
@@ -422,5 +422,5 @@ stack imports and runs without `openai` installed.
   Studio server with a model loaded to exercise live; it is not network-tested
   here. The mock provider and the full agent/tool/orchestration stack are covered
   by the test suite.
-- Config (provider, model, base URL) persists to `~/.llm-cli/config.json`.
+- Config (provider, model, base URL) persists to `~/.llmcode/config.json`.
   API keys are read from the environment only and never written to disk.

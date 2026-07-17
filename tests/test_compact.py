@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from llmcli.agent import Agent
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL
+from llmcode.agent import Agent
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL
 
 
 def _summarizing_provider(summary_text: str):

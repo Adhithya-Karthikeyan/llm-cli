@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from llmcli.orchestration import make_spawn_agent_tool
-from llmcli.providers import MockProvider
+from llmcode.orchestration import make_spawn_agent_tool
+from llmcode.providers import MockProvider
 
 
 def _captured_agent(context_budget: int, context_ceiling: int,
@@ -13,8 +13,8 @@ def _captured_agent(context_budget: int, context_ceiling: int,
     provider = MockProvider(scenario="hello")
     captured: list = []
 
-    import llmcli.orchestration as _mod
-    from llmcli.agent import Agent
+    import llmcode.orchestration as _mod
+    from llmcode.agent import Agent
 
     original_init = Agent.__init__
 
@@ -93,8 +93,8 @@ def test_spawn_agent_threads_context_adaptive_true():
 def _captured_agent_with_code_search():
     """Build a spawn tool WITH an injected code_search tool and capture the
     sub-Agent kwargs without running it."""
-    from llmcli.agent import Agent
-    from llmcli.code_index import make_code_search_tool
+    from llmcode.agent import Agent
+    from llmcode.code_index import make_code_search_tool
 
     provider = MockProvider(scenario="hello")
     code_search = make_code_search_tool(provider=provider, workspace=".")

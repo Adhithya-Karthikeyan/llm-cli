@@ -6,7 +6,7 @@ conventions the assistant should follow — the same idea as Claude Code's
 standard. This module locates that file at the project ROOT and turns it into a
 compact system-prompt block a later wave can append every session.
 
-Design notes (kept in line with ``llmcli/tools.py``):
+Design notes (kept in line with ``llmcode/tools.py``):
 - Reads are byte-capped (``max_bytes``) so a large rules file can't blow up the
   prompt on a small local model — same defensive posture as ``_read_file``.
 - UTF-8 with ``errors="ignore"`` so a stray byte never crashes a session.
@@ -24,8 +24,8 @@ from pathlib import Path
 # fallbacks people may already have from other assistants.
 RULES_FILENAMES: tuple[str, ...] = (
     "AGENTS.md",
-    "LLMCLI.md",
-    ".llmclirules",
+    "LLMCODE.md",
+    ".llmcoderules",
     "CONVENTIONS.md",
 )
 

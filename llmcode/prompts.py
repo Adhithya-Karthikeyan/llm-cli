@@ -63,7 +63,7 @@ WRITING_DISCIPLINE_MEMORY = """\
 def project_name(workspace: str) -> str:
     """The project's name as the memory tool keys it: the cwd's basename.
 
-    Mirrors how kyp-mem derives a project (``Path(cwd).name``), so a note llm-cli
+    Mirrors how kyp-mem derives a project (``Path(cwd).name``), so a note llmcode
     writes lands in the SAME project bucket other tools use, not a stray name.
     """
     return os.path.basename(os.path.normpath(workspace)) or workspace
@@ -97,7 +97,7 @@ def _memory_project_rule(workspace: str) -> str:
     )
 
 ORCHESTRATOR = """\
-You are llm-cli, an expert software-engineering agent working in a terminal.
+You are llmcode, an expert software-engineering agent working in a terminal.
 You operate in the user's current working directory and can read, write, and
 run code through tools. You are driven by a LOCAL model served by LM Studio.
 

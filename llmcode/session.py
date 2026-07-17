@@ -6,7 +6,7 @@ Resuming is OPT-IN — a fresh launch stays light: the saved history is only loa
 back when the user passes ``--continue``/``-c`` or runs ``/resume``. A dim
 startup hint mentions that a prior session exists.
 
-Sessions are stored LOCALLY ONLY under ``~/.llm-cli/sessions`` and are NEVER sent
+Sessions are stored LOCALLY ONLY under ``~/.llmcode/sessions`` and are NEVER sent
 anywhere. The conversation may contain file contents the model read; that is fine
 for a local tool, but the saved file stays on this machine.
 
@@ -24,7 +24,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Sessions live alongside the rest of the app's state under ~/.llm-cli.
+# Sessions live alongside the rest of the app's state under ~/.llmcode.
 SESSIONS_DIRNAME = "sessions"
 
 
@@ -52,19 +52,19 @@ def session_id(cwd: str) -> str:
 
 
 def sessions_dir() -> Path:
-    """Directory holding per-project session files (~/.llm-cli/sessions).
+    """Directory holding per-project session files (~/.llmcode/sessions).
 
     Created on demand by save_session; reads tolerate it not existing yet.
     """
-    return Path.home() / ".llm-cli" / SESSIONS_DIRNAME
+    return Path.home() / ".llmcode" / SESSIONS_DIRNAME
 
 
 def _harden_state_dir() -> None:
-    """Best-effort: restrict ~/.llm-cli to the owner (0700) so the per-project
+    """Best-effort: restrict ~/.llmcode to the owner (0700) so the per-project
     session/memory filenames aren't enumerable by other local users. Never raises
     (a missing dir / unsupported chmod is silently ignored)."""
     try:
-        os.chmod(Path.home() / ".llm-cli", 0o700)
+        os.chmod(Path.home() / ".llmcode", 0o700)
     except OSError:
         pass
 
@@ -124,7 +124,7 @@ def save_session(cwd: str, messages: list[dict], model: str, title: str) -> None
     try:
         directory = sessions_dir()
         directory.mkdir(parents=True, exist_ok=True)
-        _harden_state_dir()  # restrict ~/.llm-cli to the owner (best-effort)
+        _harden_state_dir()  # restrict ~/.llmcode to the owner (best-effort)
         # Temp file in the SAME dir so os.replace is atomic (same filesystem).
         fd, tmp = tempfile.mkstemp(dir=str(directory), suffix=".tmp")
         try:

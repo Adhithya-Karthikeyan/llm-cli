@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import llmcli.tools as tools_mod
-from llmcli.agent import Agent
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL
+import llmcode.tools as tools_mod
+from llmcode.agent import Agent
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL
 
 
 # ===========================================================================

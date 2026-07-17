@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 
-from llmcli.providers import extract_text_tool_calls
+from llmcode.providers import extract_text_tool_calls
 
 # DeepSeek control-token delimiters (NON-ASCII; built from code points so the
 # literals in this test exactly match the ones in providers.py):
@@ -464,7 +464,7 @@ class _FakeStream:
 
 
 def _local_with_stream(chunks):
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k")
     stream = _FakeStream(chunks)

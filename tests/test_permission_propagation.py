@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import threading
 
-from llmcli.agent import Agent
-from llmcli.orchestration import make_spawn_agent_tool
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL, Tool
+from llmcode.agent import Agent
+from llmcode.orchestration import make_spawn_agent_tool
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL, Tool
 
 
 def _fake_tool(name: str, requires_confirmation: bool = False) -> Tool:

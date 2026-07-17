@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llmcli.agent import Agent
-from llmcli.providers import extract_text_tool_calls
+from llmcode.agent import Agent
+from llmcode.providers import extract_text_tool_calls
 
 
 def test_qwen_xml_write_file_exact_session_payload():
@@ -196,7 +196,7 @@ class _FakeStream:
 
 
 def _local_with_stream(chunks):
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k")
     stream = _FakeStream(chunks)
@@ -350,7 +350,7 @@ class _ScriptProv:
 
 
 def test_unexecuted_tool_markup_triggers_followup_not_raw_output():
-    from llmcli.agent import looks_like_unexecuted_tool_call
+    from llmcode.agent import looks_like_unexecuted_tool_call
     assert looks_like_unexecuted_tool_call("<tool_call> <function=read_file> ...")
     assert looks_like_unexecuted_tool_call("sure, <function=foo> bar")
     assert not looks_like_unexecuted_tool_call("the file has 3 functions")
@@ -376,7 +376,7 @@ def test_xml_content_with_inner_markup_is_preserved_not_truncated():
     # HIGH bug: a write_file content that itself contains <parameter=/<function=
     # must be preserved verbatim, not truncated at the inner token (which also
     # invented a bogus arg). Hits when editing files that contain tool-call markup
-    # — including llmc's OWN parser source.
+    # — including llmcode's OWN parser source.
     body = 'def f(): return "<parameter=foo> and <function=bar>"'
     text = (
         "<function=write_file><parameter=path>x.py</parameter>"
@@ -391,7 +391,7 @@ def test_xml_content_with_inner_markup_is_preserved_not_truncated():
 
 
 def test_followthrough_guard_ignores_fenced_examples():
-    from llmcli.agent import looks_like_unexecuted_tool_call as f
+    from llmcode.agent import looks_like_unexecuted_tool_call as f
     # markup shown INSIDE a code fence / inline code is an EXAMPLE -> no nudge
     assert f("Use ```\n<function=read_file>\n``` like this") is False
     assert f("call it via `<tool_call>` markup") is False

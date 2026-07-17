@@ -7,9 +7,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-from llmcli.audit import chunk_files, discover_files, run_audit
-from llmcli.config import Config
-from llmcli.providers import MockProvider
+from llmcode.audit import chunk_files, discover_files, run_audit
+from llmcode.config import Config
+from llmcode.providers import MockProvider
 
 
 class _TextOnly(MockProvider):
@@ -79,7 +79,7 @@ def test_run_audit_smoke_returns_report(tmp_workspace):
 def test_discover_subdir_paths_are_cwd_relative_and_readable(tmp_workspace):
     """Regression for the /audit <subdir> bug: discovered paths must be
     cwd-relative so the worker's read_file (resolves against cwd) can open them."""
-    from llmcli.tools import _read_file
+    from llmcode.tools import _read_file
 
     sub = tmp_workspace / "pkg"
     sub.mkdir()
@@ -92,7 +92,7 @@ def test_discover_subdir_paths_are_cwd_relative_and_readable(tmp_workspace):
 
 
 def test_audit_tools_exclude_web_fetch():
-    from llmcli.audit import AUDIT_TOOLS
+    from llmcode.audit import AUDIT_TOOLS
 
     assert "web_fetch" not in AUDIT_TOOLS
     assert "read_file" in AUDIT_TOOLS and "repo_map" in AUDIT_TOOLS
@@ -107,7 +107,7 @@ def test_run_audit_refuses_outside_workspace(tmp_workspace):
 
 
 def test_run_audit_warns_when_file_cap_drops_coverage(tmp_workspace, monkeypatch):
-    import llmcli.audit as a
+    import llmcode.audit as a
 
     monkeypatch.setattr(a, "_AUDIT_MAX_FILES", 1)
     for i in range(3):
@@ -131,7 +131,7 @@ def test_run_audit_no_files_is_graceful(tmp_workspace):
 
 def test_run_audit_single_chunk_skips_synthesis(tmp_workspace, monkeypatch):
     """ORCH-1: one chunk -> worker summary returned directly, no second Agent call."""
-    import llmcli.audit as a
+    import llmcode.audit as a
 
     call_count = 0
 
@@ -155,7 +155,7 @@ def test_run_audit_single_chunk_skips_synthesis(tmp_workspace, monkeypatch):
 
 def test_run_audit_failed_chunk_warns_and_excluded(tmp_workspace, monkeypatch):
     """ORCH-4: failed chunk prints WARNING and is not passed to synthesis."""
-    import llmcli.audit as a
+    import llmcode.audit as a
 
     class _RaisingProvider(MockProvider):
         def stream_chat(self, messages, tools):

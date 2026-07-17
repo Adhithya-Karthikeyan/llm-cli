@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import io
 
-from llmcli.spinner import (
+from llmcode.spinner import (
     _ASCII_FRAMES,
     _BRAILLE_FRAMES,
     AntSpinner,
@@ -90,7 +90,7 @@ def test_ant_and_duck_aliases_point_at_spinner():
 # ----- ascii-mode auto-detection ------------------------------------------
 
 def test_ascii_env_switch_forces_ascii_mode(monkeypatch):
-    monkeypatch.setenv("LLMCLI_ASCII_SPINNER", "1")
+    monkeypatch.setenv("LLMCODE_ASCII_SPINNER", "1")
     sp = Spinner(_FakeConsole(is_terminal=True), enabled=True)
     assert sp.ascii_mode is True
 
@@ -126,7 +126,7 @@ def test_disabled_when_not_a_terminal_spawns_no_thread_and_writes_nothing():
 
 
 def test_env_off_switch_disables_even_on_tty(monkeypatch):
-    monkeypatch.setenv("LLMCLI_NO_SPINNER", "1")
+    monkeypatch.setenv("LLMCODE_NO_SPINNER", "1")
     sp = Spinner(_FakeConsole(is_terminal=True))
     assert sp.enabled is False
 
@@ -171,7 +171,7 @@ def test_enabled_threaded_run_writes_frames_and_clears_on_stop(monkeypatch):
     ends with the blank clear + show-cursor, and the thread is gone after stop."""
     import time as _time
 
-    import llmcli.spinner as sp_mod
+    import llmcode.spinner as sp_mod
 
     # Near-zero frame sleep so frames advance fast and the test stays quick.
     monkeypatch.setattr(sp_mod, "_FPS_SLEEP", 0.001)
@@ -196,7 +196,7 @@ def test_enabled_threaded_run_writes_frames_and_clears_on_stop(monkeypatch):
 def test_live_timer_counts_up_with_injected_clock(monkeypatch):
     """The rendered seconds track a monkeypatched monotonic clock: start at t0,
     advance the clock, and a later frame shows a larger whole-second count."""
-    import llmcli.spinner as sp_mod
+    import llmcode.spinner as sp_mod
 
     fake = {"t": 100.0}
     monkeypatch.setattr(sp_mod, "_now", lambda: fake["t"])
@@ -223,7 +223,7 @@ def test_live_timer_counts_up_with_injected_clock(monkeypatch):
 
 def test_start_is_idempotent_while_alive(monkeypatch):
     """A second start() while the thread is alive must NOT spawn a second one."""
-    import llmcli.spinner as sp_mod
+    import llmcode.spinner as sp_mod
 
     monkeypatch.setattr(sp_mod, "_FPS_SLEEP", 0.01)
     sp = Spinner(_FakeConsole(is_terminal=True), enabled=True)

@@ -1,4 +1,4 @@
-"""Tests for llmcli.mentions — @-mention expansion into injected context."""
+"""Tests for llmcode.mentions — @-mention expansion into injected context."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from llmcli import mentions
+from llmcode import mentions
 
 
 # ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ When ``project_files`` is omitted we compute it lazily via
 ``mentions.project_files`` (imported inside the function to avoid an import
 cycle). ``remediate`` never raises.
 
-Error strings matched here mirror the real ones produced in ``llmcli.tools``
+Error strings matched here mirror the real ones produced in ``llmcode.tools``
 (``_read_file`` / ``_write_file`` / ``_edit_file`` / ``_glob`` / ``_grep`` /
 ``_repo_map``); keep them in sync if those messages change.
 """

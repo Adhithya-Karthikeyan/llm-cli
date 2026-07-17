@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-import llmcli.providers as providers
-from llmcli.providers import LocalProvider, extract_text_tool_calls
+import llmcode.providers as providers
+from llmcode.providers import LocalProvider, extract_text_tool_calls
 
 
 # --------------------------------------------------------------------------
@@ -90,7 +90,7 @@ def test_pinned_provider_sends_id_slot_0():
 def test_orchestration_uses_with_id_slot_when_available(monkeypatch):
     """make_spawn_agent_tool must hand the spawned sub-agent a provider produced
     via with_id_slot(None), not the orchestrator's slot-0 provider itself."""
-    import llmcli.orchestration as orch_mod
+    import llmcode.orchestration as orch_mod
 
     orch = _orchestrator_provider()
 
@@ -117,8 +117,8 @@ def test_orchestration_uses_with_id_slot_when_available(monkeypatch):
 
 def test_orchestration_falls_back_when_provider_lacks_with_id_slot(monkeypatch):
     """A provider without with_id_slot (e.g. MockProvider) is shared unchanged."""
-    import llmcli.orchestration as orch_mod
-    from llmcli.providers import MockProvider
+    import llmcode.orchestration as orch_mod
+    from llmcode.providers import MockProvider
 
     mock = MockProvider(scenario="hello")
     assert not hasattr(mock, "with_id_slot")

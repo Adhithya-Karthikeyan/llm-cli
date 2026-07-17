@@ -1,17 +1,17 @@
 """CLI flag persistence: session-only by default, persisted only with --save.
 
 Regression guard for the bug where a throwaway run like
-``llmc --provider mock -p ...`` silently overwrote the user's saved default
-provider/model in ~/.llm-cli/config.json.
+``llmcode --provider mock -p ...`` silently overwrote the user's saved default
+provider/model in ~/.llmcode/config.json.
 """
 
 from __future__ import annotations
 
 import pytest
 
-import llmcli.__main__ as m
-import llmcli.tools as _tools_mod
-from llmcli.config import Config
+import llmcode.__main__ as m
+import llmcode.tools as _tools_mod
+from llmcode.config import Config
 
 
 @pytest.fixture(autouse=True)
@@ -112,8 +112,8 @@ def test_main_build_provider_error_returns_2(monkeypatch, capsys):
 def test_run_once_shuts_down_mcp_on_agent_error(monkeypatch):
     """finding #34: run_once must shut MCP servers down even when agent.run()
     raises (the finally cleanup guarantee)."""
-    import llmcli.repl as rmod
-    from llmcli.config import Config as Cfg
+    import llmcode.repl as rmod
+    from llmcode.config import Config as Cfg
 
     calls = {"shutdown": 0}
 
@@ -153,8 +153,8 @@ def test_repl_incidental_save_does_not_persist_session_privacy(monkeypatch):
     persist must write the model change but keep private/base_url at their
     on-disk values, mirroring the startup --save contract.
     """
-    import llmcli.repl as r
-    from llmcli.config import Config
+    import llmcode.repl as r
+    from llmcode.config import Config
 
     # On-disk default: private mode ON, loopback base_url.
     disk = Config(private=True, base_url="http://127.0.0.1:1234/v1", model="old")

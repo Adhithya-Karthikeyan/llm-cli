@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from llmcli.mcp import (
+from llmcode.mcp import (
     MCPClient,
     MCPError,
     MCPManager,
@@ -66,7 +66,7 @@ def test_call_tool_result_truncated_over_max_output(started_client):
     """MCP tool results are capped to _MAX_OUTPUT like built-in tools, so a
     server returning 50KB of text (e.g. kyp_project_context) cannot dump it
     straight into the live turn context."""
-    from llmcli.tools import _MAX_OUTPUT
+    from llmcode.tools import _MAX_OUTPUT
     big = "x" * (_MAX_OUTPUT * 3)  # well over the byte budget
     res = started_client.call_tool("echo", {"text": big})
     assert res["ok"] is True
@@ -334,8 +334,8 @@ def test_agent_tools_payload_includes_mcp_and_spawn_agent():
     MCP tools and spawn_agent. These live only in the injected per-session
     registry, never the global tools.REGISTRY, so a schema built from the global
     registry would silently drop them and the model would never call them."""
-    from llmcli.agent import Agent
-    from llmcli.orchestration import (
+    from llmcode.agent import Agent
+    from llmcode.orchestration import (
         make_spawn_agent_tool,
         orchestrator_registry,
         orchestrator_tool_names,
@@ -376,7 +376,7 @@ def test_child_env_excludes_provider_secrets(monkeypatch):
     monkeypatch.setenv("LMSTUDIO_API_KEY", "lm-secret")
     monkeypatch.setenv("GITHUB_TOKEN", "ghp-secret")
     monkeypatch.setenv("PATH", "/usr/bin")
-    from llmcli import mcp as mcp_mod
+    from llmcode import mcp as mcp_mod
 
     captured = {}
 
@@ -506,7 +506,7 @@ def test_interleaved_notification_does_not_extend_deadline():
     deadline: a stream of only-notifications still times out within the budget."""
     import time
 
-    import llmcli.mcp as mcp_mod
+    import llmcode.mcp as mcp_mod
 
     c = MCPClient(name="noisy", command="x", args=[])
     c._write_message = lambda message: None
@@ -549,7 +549,7 @@ def test_child_env_is_default_deny_allowlist(monkeypatch):
     monkeypatch.setenv("PATH", "/usr/bin")
     monkeypatch.setenv("HOME", "/home/x")
     monkeypatch.setenv("LANG", "en_US.UTF-8")
-    from llmcli import mcp as mcp_mod
+    from llmcode import mcp as mcp_mod
 
     captured = {}
 

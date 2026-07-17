@@ -1,8 +1,8 @@
-"""Tests for llmcli.hooks — user-configurable lifecycle hooks.
+"""Tests for llmcode.hooks — user-configurable lifecycle hooks.
 
 Hooks are tiny inline shell commands run around tool use. Tests inject the
 config dict directly (via load_hooks with a tmp_path file, or by building the
-dict), so no real ~/.llm-cli/hooks.json is touched.
+dict), so no real ~/.llmcode/hooks.json is touched.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from llmcli import hooks  # noqa: E402
+from llmcode import hooks  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -142,14 +142,14 @@ def test_pre_tool_regex_filters_by_tool_name(tmp_path):
 
 
 def test_pre_tool_hook_sees_tool_name_env(tmp_path):
-    # Hook exits non-zero only when LLMC_TOOL_NAME is the expected value, and
+    # Hook exits non-zero only when LLMCODE_TOOL_NAME is the expected value, and
     # emits the value it saw so we can assert it was passed correctly.
     cfg = {
         "PreToolUse": [
             {
                 "match": "",
-                "command": 'echo "saw=$LLMC_TOOL_NAME" >&2; '
-                'test "$LLMC_TOOL_NAME" = "write_file" && exit 1 || exit 0',
+                "command": 'echo "saw=$LLMCODE_TOOL_NAME" >&2; '
+                'test "$LLMCODE_TOOL_NAME" = "write_file" && exit 1 || exit 0',
             }
         ]
     }
@@ -159,14 +159,14 @@ def test_pre_tool_hook_sees_tool_name_env(tmp_path):
 
 
 def test_pre_tool_hook_sees_args_env_and_stdin(tmp_path):
-    # LLMC_TOOL_ARGS carries the JSON args; also piped on stdin. Block if the
+    # LLMCODE_TOOL_ARGS carries the JSON args; also piped on stdin. Block if the
     # env var contains the secret path so we know it was delivered.
     cfg = {
         "PreToolUse": [
             {
                 "match": "",
-                "command": 'echo "$LLMC_TOOL_ARGS" >&2; '
-                'case "$LLMC_TOOL_ARGS" in *"/etc/passwd"*) exit 1;; esac; exit 0',
+                "command": 'echo "$LLMCODE_TOOL_ARGS" >&2; '
+                'case "$LLMCODE_TOOL_ARGS" in *"/etc/passwd"*) exit 1;; esac; exit 0',
             }
         ]
     }
@@ -197,7 +197,7 @@ def test_pre_tool_timeout_blocks_fail_closed(tmp_path):
 
 
 def test_pre_tool_env_injection_overrides(tmp_path):
-    # Custom env is honored; LLMC_* is layered on top of it.
+    # Custom env is honored; LLMCODE_* is layered on top of it.
     cfg = {
         "PreToolUse": [
             {"match": "", "command": 'test "$MY_FLAG" = "on" && exit 1 || exit 0'}
@@ -253,7 +253,7 @@ def test_post_tool_sees_result_env(tmp_path):
     out_file = tmp_path / "captured"
     cfg = {
         "PostToolUse": [
-            {"match": "", "command": f'printf "%s" "$LLMC_TOOL_RESULT" > {out_file}'}
+            {"match": "", "command": f'printf "%s" "$LLMCODE_TOOL_RESULT" > {out_file}'}
         ]
     }
     hooks.run_post_tool(

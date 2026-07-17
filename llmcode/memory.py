@@ -587,7 +587,7 @@ class MemoryStore:
             target = Path(path)
             directory = target.parent
             directory.mkdir(parents=True, exist_ok=True)
-            _harden_state_dir()  # restrict ~/.llm-cli to the owner (best-effort)
+            _harden_state_dir()  # restrict ~/.llmcode to the owner (best-effort)
             # Temp file in the SAME dir so os.replace is atomic (same filesystem).
             fd, tmp = tempfile.mkstemp(dir=str(directory), suffix=".tmp")
             try:

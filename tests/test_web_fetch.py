@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-import llmcli.tools as _tools_mod
-from llmcli.tools import (
+import llmcode.tools as _tools_mod
+from llmcode.tools import (
     _CGNAT_NET,
     REGISTRY,
     _WEB_MAX_REDIRECTS,
@@ -112,7 +112,7 @@ def test_html_to_text_caps_oversize_body():
 
 def test_web_fetch_blocks_redirect_to_private(monkeypatch):
     """A 302 to a private host on the 2nd hop must be blocked (re-validated)."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     # First hop: a public-looking host returns a redirect to a private host.
     def fake_resolve(host, port):
@@ -135,7 +135,7 @@ def test_web_fetch_blocks_redirect_to_private(monkeypatch):
 
 
 def test_web_fetch_download_truncated(monkeypatch):
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_resolve_safe_ip", lambda h, p: ("8.8.8.8", ""))
     big = b"A" * (t._WEB_MAX_BYTES + 100)
@@ -149,7 +149,7 @@ def test_web_fetch_download_truncated(monkeypatch):
 
 
 def test_web_fetch_html_detection_uppercase(monkeypatch):
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_resolve_safe_ip", lambda h, p: ("8.8.8.8", ""))
     body = b"<HTML><BODY><P>Hello</P><SCRIPT>x()</SCRIPT></BODY></HTML>"
@@ -180,7 +180,7 @@ def test_html_to_text_strips_scripts_and_styles():
 def test_web_fetch_redirect_cap(monkeypatch):
     """A server that always 302s to a fresh public host must hit the hop cap and
     fail with 'too many redirects', proving the bound (not an unbounded loop)."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     calls = {"n": 0}
 
@@ -201,7 +201,7 @@ def test_web_fetch_redirect_cap(monkeypatch):
 
 def test_web_fetch_relative_redirect_resolved(monkeypatch):
     """A 302 with a RELATIVE Location must be urljoin'd against the current URL."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_resolve_safe_ip", lambda h, p: ("8.8.8.8", ""))
     seen_urls: list[str] = []
@@ -222,7 +222,7 @@ def test_web_fetch_relative_redirect_resolved(monkeypatch):
 
 def test_web_fetch_redirect_to_new_public_host_is_repinned(monkeypatch):
     """Each redirect hop must be re-resolved + re-pinned (SSRF re-check)."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     resolved_hosts: list[str] = []
 

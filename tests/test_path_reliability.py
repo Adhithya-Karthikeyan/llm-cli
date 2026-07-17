@@ -4,7 +4,7 @@ uses a shell that honors `echo -n` (the macOS /bin/sh mangling bug)."""
 
 from __future__ import annotations
 
-from llmcli.tools import _edit_file, _read_file, _run_bash, _write_file
+from llmcode.tools import _edit_file, _read_file, _run_bash, _write_file
 
 
 # ----- relative paths inside the workspace succeed -------------------------
@@ -52,7 +52,7 @@ def test_read_file_absolute_outside_refused_with_relative_hint(tmp_workspace):
 def test_run_bash_echo_n_not_corrupted(tmp_workspace, monkeypatch):
     """The shell fix: `echo -n hi > f` must write exactly `hi`, never `-n hi`.
     macOS /bin/sh (POSIX bash) prints a literal "-n"; /bin/bash honors it."""
-    monkeypatch.setattr("llmcli.tools._PRIVATE", False)
+    monkeypatch.setattr("llmcode.tools._PRIVATE", False)
     r = _run_bash({"command": "echo -n hi > f.txt"})
     assert r["ok"] is True
     assert (tmp_workspace / "f.txt").read_text(encoding="utf-8") == "hi"

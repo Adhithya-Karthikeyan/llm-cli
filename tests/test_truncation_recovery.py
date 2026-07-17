@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llmcli.agent import Agent
+from llmcode.agent import Agent
 
 
 class _GentleProv:

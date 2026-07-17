@@ -556,7 +556,7 @@ class CodeIndex:
             target = Path(path)
             directory = target.parent
             directory.mkdir(parents=True, exist_ok=True)
-            _harden_state_dir()  # restrict ~/.llm-cli to the owner (best-effort)
+            _harden_state_dir()  # restrict ~/.llmcode to the owner (best-effort)
             fd, tmp = tempfile.mkstemp(dir=str(directory), suffix=".tmp")
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -730,7 +730,7 @@ def _format_hits(hits: list[CodeChunk], capped: bool) -> str:
 
 def make_code_search_tool(provider, workspace, private: bool = False,
                           top_k: int = 5, config=None):
-    """Build the ``code_search`` :class:`~llmcli.tools.Tool` bound to a provider +
+    """Build the ``code_search`` :class:`~llmcode.tools.Tool` bound to a provider +
     workspace.
 
     On each call it gets-or-loads the workspace's CodeIndex (cached across calls),

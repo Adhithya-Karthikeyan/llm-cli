@@ -10,7 +10,7 @@ import io
 
 from rich.console import Console
 
-from llmcli.agent import Agent
+from llmcode.agent import Agent
 
 
 class _FakeProv:

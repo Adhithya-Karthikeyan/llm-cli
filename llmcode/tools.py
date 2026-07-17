@@ -142,7 +142,7 @@ _SHELL_ENV_ALLOWLIST = (
 _WEB_TIMEOUT = 15           # seconds
 _WEB_MAX_BYTES = 2_000_000  # cap the download before extraction (~2 MB)
 _WEB_MAX_REDIRECTS = 5
-_WEB_UA = "llmcli/0.1 (local agentic CLI)"
+_WEB_UA = "llmcode/0.1 (local agentic CLI)"
 # Carrier-grade NAT range (RFC 6598) is NOT flagged by ipaddress.is_private /
 # is_reserved, so add it explicitly to the SSRF blocklist.
 _CGNAT_NET = ipaddress.ip_network("100.64.0.0/10")

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from llmcli.memory import MemoryStore, MAX_RECORDS, _tokenize
+from llmcode.memory import MemoryStore, MAX_RECORDS, _tokenize
 
 
 # --------------------------------------------------------------------------- #

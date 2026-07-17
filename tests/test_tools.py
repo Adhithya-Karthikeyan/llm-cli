@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llmcli.tools import (
+from llmcode.tools import (
     FULL,
     READ_ONLY,
     REGISTRY,
@@ -96,7 +96,7 @@ def test_grep(tmp_workspace):
 
 def test_grep_line_preview_capped(tmp_workspace):
     """PERF-2: each match's line preview is capped (~160 chars), not 500."""
-    from llmcli.tools import _MAX_GREP_LINE
+    from llmcode.tools import _MAX_GREP_LINE
 
     _call("write_file", {"path": "long.txt", "content": "NEEDLE " + "x" * 1000 + "\n"})
     res = _call("grep", {"pattern": "NEEDLE"})
@@ -110,7 +110,7 @@ def test_grep_payload_byte_capped(tmp_workspace):
     _truncate), trimming matches and flagging truncated when it would overflow."""
     import json as _json
 
-    from llmcli.tools import _MAX_GREP_LINE, _MAX_OUTPUT
+    from llmcode.tools import _MAX_GREP_LINE, _MAX_OUTPUT
 
     # Many matching lines, each near the preview cap => serialized size >> budget.
     body = "".join(f"NEEDLE {'y' * (_MAX_GREP_LINE - 8)}\n" for _ in range(400))
@@ -296,7 +296,7 @@ def test_run_bash_pipefail_propagates_pipeline_failure(tmp_workspace):
     where sandbox-exec exists (the private-mode wrapper that adds pipefail)."""
     import shutil as _shutil
 
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     if _shutil.which("sandbox-exec") is None:
         import pytest
@@ -315,7 +315,7 @@ def test_run_bash_pipefail_propagates_pipeline_failure(tmp_workspace):
 def test_run_bash_pipefail_propagates_under_network_mode(tmp_workspace, monkeypatch):
     """finding #4: pipefail is applied in --allow-network mode too, so a failing
     pipeline stage propagates identically to private mode (no longer masked)."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_PRIVATE", False)
     res = _call("run_bash", {"command": "false | true"})

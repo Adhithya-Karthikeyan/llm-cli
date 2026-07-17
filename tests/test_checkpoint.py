@@ -1,7 +1,7 @@
-"""Tests for llmcli/checkpoint.py — the git-free file-snapshot / undo safety net.
+"""Tests for llmcode/checkpoint.py — the git-free file-snapshot / undo safety net.
 
 All offline/deterministic: a temp HOME (so we never touch the real
-~/.llm-cli/checkpoints) and tmp_path project roots. Covers snapshot+undo of a
+~/.llmcode/checkpoints) and tmp_path project roots. Covers snapshot+undo of a
 modified file, of a newly-created file (undo deletes it), LIFO undo ordering,
 the MAX_CHECKPOINTS history bound (oldest evicted), binary safety, the no-op
 "nothing to undo" message, path confinement (never escapes root), and the
@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import pytest
 
-import llmcli.checkpoint as c
-import llmcli.session as s
+import llmcode.checkpoint as c
+import llmcode.session as s
 
 
 @pytest.fixture(autouse=True)

@@ -5,9 +5,9 @@ sleep so nothing ever blocks on the real wall clock.
 
 Two features under test:
   1. Self-heal: a FAILED tool call is auto-corrected + retried by the harness
-     (via llmcli.remediation) BEFORE the model sees the error. Bounded by
+     (via llmcode.remediation) BEFORE the model sees the error. Bounded by
      auto_fix_max_attempts, non-destructive, and OFF by default.
-  2. Cooldown: a long run breaks mid-way to let the GPU cool (via llmcli.cooldown).
+  2. Cooldown: a long run breaks mid-way to let the GPU cool (via llmcode.cooldown).
      OFF by default so tests never pause.
 
 The default Agent construction (both knobs off) must be behaviour-identical.
@@ -19,13 +19,13 @@ import time
 
 import pytest
 
-import llmcli.cooldown as cooldown
-import llmcli.remediation as remediation
-import llmcli.repl as r
-from llmcli.agent import Agent
-from llmcli.config import Config, load_config, save_config
-from llmcli.providers import MockProvider, Provider
-from llmcli.tools import FULL
+import llmcode.cooldown as cooldown
+import llmcode.remediation as remediation
+import llmcode.repl as r
+from llmcode.agent import Agent
+from llmcode.config import Config, load_config, save_config
+from llmcode.providers import MockProvider, Provider
+from llmcode.tools import FULL
 
 
 # --------------------------------------------------------------------------- #

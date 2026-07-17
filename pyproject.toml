@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "python-llmcli"
+name = "llmcode"
 dynamic = ["version"]
 description = "A lightweight, personal Claude Code-style agentic CLI for LOCAL LLMs (LM Studio)."
 readme = "README.md"
@@ -58,22 +58,21 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.urls]
-Homepage = "https://github.com/Adhithya-Karthikeyan/llm-cli"
-Repository = "https://github.com/Adhithya-Karthikeyan/llm-cli"
-Issues = "https://github.com/Adhithya-Karthikeyan/llm-cli/issues"
-Documentation = "https://github.com/Adhithya-Karthikeyan/llm-cli#readme"
+Homepage = "https://github.com/Adhithya-Karthikeyan/llmcode"
+Repository = "https://github.com/Adhithya-Karthikeyan/llmcode"
+Issues = "https://github.com/Adhithya-Karthikeyan/llmcode/issues"
+Documentation = "https://github.com/Adhithya-Karthikeyan/llmcode#readme"
 
 [project.scripts]
-llmcli = "llmcli.__main__:main"
-llmc = "llmcli.__main__:main"
+llmcode = "llmcode.__main__:main"
 
 [tool.setuptools]
-packages = ["llmcli"]
+packages = ["llmcode"]
 
-# Single-source the version from llmcli/__init__.py (__version__) so the
+# Single-source the version from llmcode/__init__.py (__version__) so the
 # installed runtime version can never drift from the published metadata.
 [tool.setuptools.dynamic]
-version = { attr = "llmcli.__version__" }
+version = { attr = "llmcode.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

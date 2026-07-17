@@ -21,9 +21,9 @@ import io
 
 from rich.console import Console
 
-from llmcli.agent import Agent
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL
+from llmcode.agent import Agent
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL
 
 
 class _AsciiIO(io.StringIO):

@@ -1,4 +1,4 @@
-"""Tests for llmcli.gitint — real tmp git repos + non-repo graceful degradation.
+"""Tests for llmcode.gitint — real tmp git repos + non-repo graceful degradation.
 
 The git-backed tests build a genuine repository (init, local user config, an
 initial commit) in a pytest ``tmp_path`` and assert the helpers observe real
@@ -12,7 +12,7 @@ import subprocess
 
 import pytest
 
-from llmcli import gitint
+from llmcode import gitint
 
 # Every test that drives real git is gated on the binary being present.
 requires_git = pytest.mark.skipif(

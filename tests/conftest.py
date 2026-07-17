@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from llmcli.providers import MockProvider
+from llmcode.providers import MockProvider
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def reset_global_state(monkeypatch):
     a fresh state.
     """
     # Reset the code index process-wide cache (per-workspace dict).
-    from llmcli import code_index
+    from llmcode import code_index
     code_index._INDEX_CACHE.clear()
 
 

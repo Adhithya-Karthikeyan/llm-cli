@@ -8,10 +8,10 @@ that did not exist before — so a bad edit is always one step reversible withou
 any version-control system.
 
 Storage is LOCAL ONLY, under a per-project directory keyed the SAME way
-:mod:`llmcli.session` keys its per-project session file (``session_id``), so a
+:mod:`llmcode.session` keys its per-project session file (``session_id``), so a
 checkpoint set never leaks between unrelated projects:
 
-    ~/.llm-cli/checkpoints/<project-id>/
+    ~/.llmcode/checkpoints/<project-id>/
         index.json        # ordered metadata (oldest -> newest)
         blobs/<ref>.blob  # a byte-for-byte copy of each snapshotted file
 
@@ -19,7 +19,7 @@ The public functions accept an OPTIONAL ``session`` token. When given, the
 checkpoints are stored/read under a per-session subdirectory so a fresh REPL
 session only ever sees (and can ``/undo``) its OWN checkpoints:
 
-    ~/.llm-cli/checkpoints/<project-id>/sessions/<session>/
+    ~/.llmcode/checkpoints/<project-id>/sessions/<session>/
         index.json
         blobs/<ref>.blob
 
@@ -46,7 +46,7 @@ from pathlib import Path
 
 from .session import session_id
 
-# Checkpoints live alongside the rest of the app's state under ~/.llm-cli.
+# Checkpoints live alongside the rest of the app's state under ~/.llmcode.
 CHECKPOINTS_DIRNAME = "checkpoints"
 # Bounded history: keep at most this many checkpoints per project; evict oldest.
 MAX_CHECKPOINTS = 50
@@ -57,11 +57,11 @@ MAX_CHECKPOINTS = 50
 # --------------------------------------------------------------------------- #
 
 def checkpoints_dir() -> Path:
-    """Root directory holding every project's checkpoints (~/.llm-cli/checkpoints).
+    """Root directory holding every project's checkpoints (~/.llmcode/checkpoints).
 
     Created on demand by :func:`snapshot`; reads tolerate it not existing yet.
     """
-    return Path.home() / ".llm-cli" / CHECKPOINTS_DIRNAME
+    return Path.home() / ".llmcode" / CHECKPOINTS_DIRNAME
 
 
 def _session_subdir(session: str | None) -> str | None:
@@ -81,8 +81,8 @@ def _session_subdir(session: str | None) -> str | None:
 def project_dir(root: str, session: str | None = None) -> Path:
     """Directory holding the checkpoints for the project rooted at ``root``.
 
-    The per-project component is :func:`llmcli.session.session_id` of ``root`` —
-    the exact scheme :mod:`llmcli.session` uses for its per-project session file
+    The per-project component is :func:`llmcode.session.session_id` of ``root`` —
+    the exact scheme :mod:`llmcode.session` uses for its per-project session file
     — so the SAME project always maps to the SAME directory and different
     projects never collide.
 
@@ -113,13 +113,13 @@ def _index_path(root: str, session: str | None = None) -> Path:
 # --------------------------------------------------------------------------- #
 
 def _harden_state_dir() -> None:
-    """Best-effort: restrict ~/.llm-cli to the owner (0700). Never raises.
+    """Best-effort: restrict ~/.llmcode to the owner (0700). Never raises.
 
-    Mirrors :func:`llmcli.session._harden_state_dir` so snapshotted file bytes
+    Mirrors :func:`llmcode.session._harden_state_dir` so snapshotted file bytes
     aren't world-readable via a lax parent dir.
     """
     try:
-        os.chmod(Path.home() / ".llm-cli", 0o700)
+        os.chmod(Path.home() / ".llmcode", 0o700)
     except OSError:
         pass
 

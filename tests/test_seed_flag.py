@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from llmcli.config import Config, load_config, save_config
+from llmcode.config import Config, load_config, save_config
 
 
 # --------------------------------------------------------------------------- #
@@ -83,7 +83,7 @@ def test_seed_round_trips_through_save(tmp_path):
 
 
 def test_mock_provider_accepts_seed(tmp_workspace):
-    from llmcli.providers import MockProvider
+    from llmcode.providers import MockProvider
 
     prov = MockProvider(scenario="hello", seed=42)
     assert prov.seed == 42
@@ -99,7 +99,7 @@ def test_mock_provider_accepts_seed(tmp_workspace):
 
 
 def test_build_provider_passes_seed(tmp_workspace):
-    from llmcli.repl import build_provider
+    from llmcode.repl import build_provider
 
     prov = build_provider(
         "mock", "model", "http://localhost:1234/v1",

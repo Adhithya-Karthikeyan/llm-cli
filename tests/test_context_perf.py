@@ -14,8 +14,8 @@ Two hot-path fixes are exercised here:
 
 from __future__ import annotations
 
-from llmcli.agent import Agent, _STALE_TOOL_RESULT_CAP
-from llmcli.providers import MockProvider
+from llmcode.agent import Agent, _STALE_TOOL_RESULT_CAP
+from llmcode.providers import MockProvider
 
 
 def _agent(tool_names=None) -> Agent:
@@ -107,7 +107,7 @@ def test_trim_no_mutation_when_nothing_trimmable():
 # --------------------------------------------------------------------------- #
 def test_tools_payload_built_once_and_reused(monkeypatch):
     """_tools_payload is built once and reused across turns when names are fixed."""
-    import llmcli.agent as agent_mod
+    import llmcode.agent as agent_mod
 
     ag = _agent(tool_names=["read_file", "write_file"])
 
@@ -133,7 +133,7 @@ def test_tools_payload_built_once_and_reused(monkeypatch):
 
 def test_tools_payload_rebuilds_when_tool_names_change(monkeypatch):
     """Changing the active tool-name set rebuilds the schema (and stays correct)."""
-    import llmcli.agent as agent_mod
+    import llmcode.agent as agent_mod
 
     ag = _agent(tool_names=["read_file"])
 

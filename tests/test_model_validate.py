@@ -6,9 +6,9 @@ model. No network: list_local_models is monkeypatched.
 
 from __future__ import annotations
 
-import llmcli.repl as repl
-from llmcli.config import Config
-from llmcli.providers import MockProvider
+import llmcode.repl as repl
+from llmcode.config import Config
+from llmcode.providers import MockProvider
 
 
 def _repl(monkeypatch, provider="local"):

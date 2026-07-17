@@ -11,8 +11,8 @@ via a fake client (no network). Verifies:
 
 from __future__ import annotations
 
-from llmcli.providers import LocalProvider
-from llmcli.repl import build_provider
+from llmcode.providers import LocalProvider
+from llmcode.repl import build_provider
 
 
 class _FakeStream:
@@ -103,7 +103,7 @@ def test_build_provider_local_forwards_seed_and_id_slot():
 
 def test_build_provider_mock_forwards_seed_unchanged():
     """MockProvider still receives seed (unchanged behavior)."""
-    from llmcli.providers import MockProvider
+    from llmcode.providers import MockProvider
 
     p = build_provider("mock", model="m", base_url="http://127.0.0.1:1234/v1",
                        seed=5)

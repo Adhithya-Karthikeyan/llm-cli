@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from llmcli.agent import Agent, request_weight
-from llmcli.config import Config, load_config
-from llmcli.providers import MockProvider
+from llmcode.agent import Agent, request_weight
+from llmcode.config import Config, load_config
+from llmcode.providers import MockProvider
 
 
 class _Text(MockProvider):

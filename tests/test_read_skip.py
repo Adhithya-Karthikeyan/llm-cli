@@ -1,4 +1,4 @@
-"""Tests for the read_file skip-list guard (llmcli.tools._read_file).
+"""Tests for the read_file skip-list guard (llmcode.tools._read_file).
 
 A lockfile/minified/generated file read WHOLE (no offset/limit) and larger than
 ``_SKIP_FILE_WARN_BYTES`` is refused with a hint; the same file WITH offset/
@@ -8,7 +8,7 @@ a normal source file is always allowed.
 
 from __future__ import annotations
 
-from llmcli.tools import _read_file, is_context_bloat_file
+from llmcode.tools import _read_file, is_context_bloat_file
 
 
 def test_large_lockfile_whole_read_refused_with_hint(tmp_workspace):

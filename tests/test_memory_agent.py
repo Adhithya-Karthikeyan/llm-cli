@@ -24,11 +24,11 @@ import re
 
 import pytest
 
-from llmcli.agent import Agent
-from llmcli.memory import MemoryStore
-from llmcli.providers import MockProvider
-from llmcli import repl, session as session_mod, memory as memory_mod
-from llmcli.config import Config
+from llmcode.agent import Agent
+from llmcode.memory import MemoryStore
+from llmcode.providers import MockProvider
+from llmcode import repl, session as session_mod, memory as memory_mod
+from llmcode.config import Config
 
 
 _MCP_DOC = "the mcp toggle command turns servers on or off"
@@ -409,7 +409,7 @@ def test_provider_error_not_persisted_or_recorded(tmp_workspace, prov_cls, expec
 
 def test_run_once_persists_memory_store(tmp_path, monkeypatch):
     # Pin HOME so sessions_dir()/store_path() write into the tmp tree, not the
-    # real ~/.llm-cli. chdir so the cwd (== session/store key) is the tmp project.
+    # real ~/.llmcode. chdir so the cwd (== session/store key) is the tmp project.
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.chdir(tmp_path)
 

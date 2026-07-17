@@ -1,6 +1,6 @@
 """A tiny "working" indicator with a smooth braille spinner (stdlib only).
 
-While llmcli is busy — waiting on the (often long) model think/generate, or
+While llmcode is busy — waiting on the (often long) model think/generate, or
 running a batch of tools — a small braille dots spinner animates in place next
 to a short status line that shows a LIVE elapsed timer and the interrupt hint::
 
@@ -22,7 +22,7 @@ Hard guarantees (the stream must stay byte-for-byte clean for non-TTY use):
     can't bob at the end of the line; ``stop()`` (and the worker on exit)
     restores it ("\x1b[?25h"). All ANSI writes are TTY-gated and swallow errors.
   - UNICODE-SAFE: if the output stream can't encode the braille glyph (or the
-    LLMCLI_ASCII_SPINNER off-switch is set) the spinner degrades to a plain
+    LLMCODE_ASCII_SPINNER off-switch is set) the spinner degrades to a plain
     ASCII spinner ("|/-\\") with the same "working · Ns · ctrl-c to stop" text.
     Detection never raises.
   - NEVER INTERLEAVE: the caller stops the spinner BEFORE any other console
@@ -44,13 +44,13 @@ import sys
 import threading
 import time
 
-# Off-switch: set LLMCLI_NO_SPINNER=1 (or any non-empty value) to force-disable
+# Off-switch: set LLMCODE_NO_SPINNER=1 (or any non-empty value) to force-disable
 # the spinner even on a real TTY. Default is ON for terminals.
-_ENV_DISABLE = "LLMCLI_NO_SPINNER"
+_ENV_DISABLE = "LLMCODE_NO_SPINNER"
 
 # Force the ASCII fallback spinner even on a unicode-capable terminal. Also
 # triggered automatically when the stream can't encode the braille glyph.
-_ENV_ASCII = "LLMCLI_ASCII_SPINNER"
+_ENV_ASCII = "LLMCODE_ASCII_SPINNER"
 
 # Standard braille "dots" spinner cycle: one glyph per tick, wraps at the end.
 _BRAILLE_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"

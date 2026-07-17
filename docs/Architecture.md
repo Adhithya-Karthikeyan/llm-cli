@@ -1,24 +1,24 @@
-# llm-cli — Architecture
+# llmcode — Architecture
 
-tags: architecture, llm-cli, design, modules
+tags: architecture, llmcode, design, modules
 created: 2026-06-22
 updated: 2026-06-22
 
-## llm-cli — Architecture
+## llmcode — Architecture
 
-Lightweight LOCAL-ONLY agentic CLI (Claude Code-style) in Python. Source at `/Users/adhithya/Projects/apps/llm-cli`. Entry point: `llmc`. 7 source modules, 95 tests, 95 pytest pass.
+Lightweight LOCAL-ONLY agentic CLI (Claude Code-style) in Python. Source at `/Users/adhithya/Projects/apps/llmcode`. Entry point: `llmcode`. 7 source modules, 95 tests, 95 pytest pass.
 
 ## Project Layout
 
 ```
-llm-cli/
-├── pyproject.toml          # setuptools; deps: openai>=2,<3, rich>=13.7.0,<16, prompt_toolkit>=3.0.43,<4; py>3.14; entry: llmc
+llmcode/
+├── pyproject.toml          # setuptools; deps: openai>=2,<3, rich>=13.7.0,<16, prompt_toolkit>=3.0.43,<4; py>3.14; entry: llmcode
 ├── requirements.txt        # stale; openai>=1.40.0 no upper bound
 ├── README.md
-├── llmcli/                 # source package (7 modules)
+├── llmcode/                 # source package (7 modules)
 │   ├── __init__.py         # __version__ = "0.1.0"
 │   ├── __main__.py         # CLI entry: arg parsing, --save, -p one-shot, REPL
-│   ├── config.py           # Config dataclass, load/save ~/.llm-cli/config.json
+│   ├── config.py           # Config dataclass, load/save ~/.llmcode/config.json
 │   ├── providers.py        # Provider ABC, LocalProvider, MockProvider, fenced-JSON fallback
 │   ├── prompts.py          # ORCHESTRATOR/EXPLORER/CODER/REVIEWER role prompts, OUTPUT_CONTRACT, WRITING_DISCIPLINE
 │   ├── tools.py            # Tool dataclass, REGISTRY (7 built-in), openai_schema(), security guards
@@ -26,7 +26,7 @@ llm-cli/
 │   ├── repl.py             # prompt_toolkit REPL, slash commands, confirm wiring, run_once()
 │   ├── orchestration.py    # spawn_agent tool, ROLE_TOOLS, orchestrator_registry/tool_names
 │   └── mcp.py              # stdio MCP client (JSON-RPC 2.0, stdlib only), MCPManager
-├── llmcli.egg-info/        # auto-generated build metadata
+├── llmcode.egg-info/        # auto-generated build metadata
 ├── tests/                  # 13 test files, all offline, MockProvider-only
 │   ├── conftest.py         # tmp_workspace + mock_provider fixtures
 │   ├── fake_mcp_server.py  # stdlib MCP server fake
@@ -44,7 +44,7 @@ llm-cli/
 
 ### `config.py` — Configuration
 - `Config` dataclass: `provider`, `model`, `base_url`, `max_iterations`, `effort`. Serializable via `asdict()`.
-- `load_config()`: Loads `~/.llm-cli/config.json`; warns on corrupt JSON, falls back; safe type-checking on every field.
+- `load_config()`: Loads `~/.llmcode/config.json`; warns on corrupt JSON, falls back; safe type-checking on every field.
 - `save_config()`: Writes JSON; best-effort (swallows OSError).
 - `get_api_key()`: Env-var resolution chain: `OPENAI_API_KEY` → `LMSTUDIO_API_KEY` → `"lm-studio"` (hardcoded default). Never written to disk.
 - Constants: `PROVIDERS = ("local", "mock")`, `EFFORT_LEVELS = ("off", "low", "medium", "high")`, `DEFAULT_BASE_URL = "http://localhost:1234/v1"`.
@@ -117,7 +117,7 @@ llm-cli/
 
 ### `mcp.py` — MCP System
 - `MCPClient`: stdio JSON-RPC 2.0 client. Handshake (`initialize`→`notifications/initialized`→`tools/list`). `select()`-bounded reads prevent hangs. `close()` terminates/kills child with grace period.
-- `MCPManager`: Starts configured servers from `~/.llm-cli/mcp.json`, registers tools as `mcp__<server>__<tool>` names. Dedupes collisions. `load_mcp_config()` reads Claude Desktop format.
+- `MCPManager`: Starts configured servers from `~/.llmcode/mcp.json`, registers tools as `mcp__<server>__<tool>` names. Dedupes collisions. `load_mcp_config()` reads Claude Desktop format.
 - **Security**: Child env = allowlisted base + server config. NO provider/cloud secrets forwarded. Tool names validated against `[A-Za-z0-9._-]+`. `readOnlyHint` only relaxes confirmation when operator sets `trustReadOnlyHint: true`.
 - **Timeout poisoning**: On `tools/call` timeout, child is killed, client marked `poisoned`, subsequent calls fail fast.
 - **ID type tolerance**: Matches `str(msg_id) == str(req_id)` to handle servers that echo int ids as strings.
@@ -180,9 +180,9 @@ llm-cli/
 
 ## Run
 
-- `cd <dir> && source .venv/bin/activate && llmc` (qwen default).
-- One-shot: `llmc -p "task" --yes`.
+- `cd <dir> && source .venv/bin/activate && llmcode` (qwen default).
+- One-shot: `llmcode -p "task" --yes`.
 
 ## Related
-  1.00 > Objective (llm-cli/Objective.md)
-  0.95 > llm-cli — Build Status (llm-cli/Status.md)
+  1.00 > Objective (llmcode/Objective.md)
+  0.95 > llmcode — Build Status (llmcode/Status.md)

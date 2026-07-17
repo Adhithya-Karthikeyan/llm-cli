@@ -9,8 +9,8 @@ all the logic) plus one run()-level reset check via the offline MockProvider.
 
 from __future__ import annotations
 
-from llmcli.agent import _BLOATING_TOOL_NAMES, _TURN_READ_NUDGE_BYTES, Agent
-from llmcli.providers import MockProvider
+from llmcode.agent import _BLOATING_TOOL_NAMES, _TURN_READ_NUDGE_BYTES, Agent
+from llmcode.providers import MockProvider
 
 _NUDGE_MARK = "[context-budget]"
 
@@ -70,7 +70,7 @@ def test_only_known_bloating_tools_in_set():
 
 def test_config_read_nudge_default_is_32k():
     """The new config field defaults to 32_000 bytes (Feature 3)."""
-    from llmcli.config import Config
+    from llmcode.config import Config
 
     assert Config().read_nudge_bytes == 32_000
 
@@ -79,7 +79,7 @@ def test_config_read_nudge_round_trips(tmp_path):
     """A persisted custom threshold loads back; a bad value keeps the default."""
     import json
 
-    from llmcli.config import Config, load_config, save_config
+    from llmcode.config import Config, load_config, save_config
 
     p = tmp_path / "config.json"
     save_config(Config(read_nudge_bytes=5_000), path=p)

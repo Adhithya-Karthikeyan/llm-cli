@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llmcli.agent import compute_tok_stats, normalize_final_answer
+from llmcode.agent import compute_tok_stats, normalize_final_answer
 
 
 def test_strips_leading_preamble_clause():

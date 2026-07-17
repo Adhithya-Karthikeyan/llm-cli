@@ -4,10 +4,10 @@ import tempfile
 from pathlib import Path
 import sys
 
-# Add current directory to sys.path to allow importing llmcli
+# Add current directory to sys.path to allow importing llmcode
 sys.path.append(str(Path(__file__).parent.parent.resolve()))
 
-from llmcli.tools import _repo_map, estimate_text_tokens
+from llmcode.tools import _repo_map, estimate_text_tokens
 
 def test_integration_repo_map_budget_with_query():
     # 1. Setup temporary workspace inside the current directory to pass _within_workspace check

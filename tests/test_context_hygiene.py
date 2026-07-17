@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import json
 
-from llmcli.agent import (
+from llmcode.agent import (
     Agent, classify_request, _STALE_TOOL_RESULT_CAP, _STALE_ARG_FIELD_CAP,
     _MIN_TURN_BUDGET,
 )
-from llmcli.providers import MockProvider
+from llmcode.providers import MockProvider
 
 
 def _agent():

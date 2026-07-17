@@ -16,11 +16,11 @@ import threading
 
 import pytest
 
-import llmcli.gitint as gitint
-import llmcli.repl as r
-from llmcli.config import Config
-from llmcli.providers import MockProvider
-from llmcli.tools import get_tool
+import llmcode.gitint as gitint
+import llmcode.repl as r
+from llmcode.config import Config
+from llmcode.providers import MockProvider
+from llmcode.tools import get_tool
 
 
 class _FakeMCP:
@@ -272,7 +272,7 @@ def test_doctor_runs_without_raising(repl, capsys):
 # --------------------------------------------------------------------------- #
 
 def test_macro_discovered_and_expands_arguments(repl, tmp_path, monkeypatch):
-    cmd_dir = tmp_path / ".llmcli" / "commands"
+    cmd_dir = tmp_path / ".llmcode" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "greet.md").write_text("Say hello to $ARGUMENTS now.", encoding="utf-8")
     submitted = {}
@@ -282,7 +282,7 @@ def test_macro_discovered_and_expands_arguments(repl, tmp_path, monkeypatch):
 
 
 def test_commands_lists_macros(repl, tmp_path, capsys):
-    cmd_dir = tmp_path / ".llmcli" / "commands"
+    cmd_dir = tmp_path / ".llmcode" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "deploy.md").write_text("deploy $ARGUMENTS", encoding="utf-8")
     assert repl._dispatch_slash("/commands") is True

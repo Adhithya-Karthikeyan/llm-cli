@@ -1,4 +1,4 @@
-"""Tests for the ranked, budget-aware repo_map (llmcli.tools._repo_map).
+"""Tests for the ranked, budget-aware repo_map (llmcode.tools._repo_map).
 
 Covers: ranked output stays within the token budget (15% tolerance), the
 `query` arg boosts matching files to the top, an empty query uses the 8x
@@ -8,9 +8,9 @@ header shows the `~N tok` estimate.
 
 from __future__ import annotations
 
-from llmcli import repo_graph
-from llmcli.tools import _repo_map
-from llmcli.tokens import estimate_text_tokens
+from llmcode import repo_graph
+from llmcode.tools import _repo_map
+from llmcode.tokens import estimate_text_tokens
 
 
 def _setup_repo(tmp_workspace, n_files: int = 6) -> None:

@@ -2,7 +2,7 @@
 
 Fix 1 (truncation-retry cap latch) is NOT tested here: it is already addressed
 upstream — the gentle token cap is bypassed on tool-capable turns in
-``llmcli/providers.py`` (``gentle_for_this_call = self.gentle_mode and not
+``llmcode/providers.py`` (``gentle_for_this_call = self.gentle_mode and not
 tools``), so a write_file/edit_file tool call is never truncated by the gentle
 cap and there is nothing to latch. Documented here for the record.
 """
@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import json
 
-from llmcli.agent import (
+from llmcode.agent import (
     Agent,
     _BLOATING_TOOL_NAMES,
     _BLOATING_TOOL_PATTERNS,
     _is_bloating_tool,
     _msg_chars,
 )
-from llmcli.providers import MockProvider
+from llmcode.providers import MockProvider
 
 
 def _agent() -> Agent:

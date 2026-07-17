@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from llmcli.memory import (
+from llmcode.memory import (
     MemoryRecord,
     MemoryStore,
     bm25_rank,
@@ -19,8 +19,8 @@ from llmcli.memory import (
     store_path,
     _tokenize,
 )
-from llmcli.providers import MockProvider
-from llmcli.session import session_id
+from llmcode.providers import MockProvider
+from llmcode.session import session_id
 
 
 # --------------------------------------------------------------------------- #
@@ -289,7 +289,7 @@ def test_load_non_object_returns_empty_store(tmp_path):
 
 
 def test_save_never_raises_on_oserror(tmp_path, monkeypatch):
-    import llmcli.memory as m
+    import llmcode.memory as m
 
     def _boom(*a, **k):
         raise OSError("disk full")
@@ -400,7 +400,7 @@ def test_retrieve_dim_mismatch_query_unembeddable_falls_back_to_bm25():
 # --------------------------------------------------------------------------- #
 
 def test_store_caps_records_and_drops_orphan_vectors(monkeypatch):
-    import llmcli.memory as m
+    import llmcode.memory as m
 
     monkeypatch.setattr(m, "MAX_RECORDS", 3)
     store = MemoryStore()
@@ -421,7 +421,7 @@ def test_store_caps_records_and_drops_orphan_vectors(monkeypatch):
 
 
 def test_save_is_noop_when_not_dirty(tmp_path, monkeypatch):
-    import llmcli.memory as m
+    import llmcode.memory as m
 
     store = _seeded_store()  # 3 adds -> dirty
     p = tmp_path / "mem.json"
@@ -463,7 +463,7 @@ def test_bm25_cached_index_matches_fresh_recompute():
     """Regression: the cached _BM25Index must produce IDENTICAL scores to a
     fresh recompute via _bm25_over_tokenized for any query (including empty
     and no-overlap queries) — pure caching, no scoring change."""
-    from llmcli.memory import (
+    from llmcode.memory import (
         _bm25_over_tokenized,
         _build_bm25_index,
         _bm25_score_index,

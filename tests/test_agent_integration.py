@@ -16,11 +16,11 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-import llmcli.checkpoint as checkpoint_mod
-import llmcli.tools as tools_mod
-from llmcli.agent import Agent
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL
+import llmcode.checkpoint as checkpoint_mod
+import llmcode.tools as tools_mod
+from llmcode.agent import Agent
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL
 
 
 # --------------------------------------------------------------------------- #
@@ -108,7 +108,7 @@ def test_read_only_mode_blocks_write_without_executing(tmp_workspace):
 
 
 def test_plan_mode_blocks_run_bash_but_allows_reads(tmp_workspace):
-    from llmcli.agent import Agent as _A
+    from llmcode.agent import Agent as _A
 
     agent = _A(
         provider=MockProvider(), system_prompt="s", tool_names=FULL,

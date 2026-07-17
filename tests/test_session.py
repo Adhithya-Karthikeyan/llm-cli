@@ -1,7 +1,7 @@
-"""Per-project session persistence tests (llmcli/session.py + REPL wiring).
+"""Per-project session persistence tests (llmcode/session.py + REPL wiring).
 
 All offline/deterministic: a temp HOME (so we never touch the real
-~/.llm-cli/sessions) and a MockProvider. Covers the pure session helpers
+~/.llmcode/sessions) and a MockProvider. Covers the pure session helpers
 (stable/sanitized ids, save/load round-trip, corrupt/missing -> None, the
 <=1-message skip, meta shape, derive_title, relative_time buckets) and the REPL
 surface (/resume, /forget, the -c startup load, and a one-shot with no session).
@@ -13,10 +13,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import llmcli.repl as r
-import llmcli.session as s
-from llmcli.config import Config
-from llmcli.providers import MockProvider
+import llmcode.repl as r
+import llmcode.session as s
+from llmcode.config import Config
+from llmcode.providers import MockProvider
 
 
 @pytest.fixture(autouse=True)
@@ -347,7 +347,7 @@ def test_forget_deletes_session(repl, tmp_path, capsys):
 def test_forget_clears_conversation_memory(repl, tmp_path):
     """/forget must delete the persisted memory store AND reset the live one so a
     forgotten project starts with no recalled records."""
-    import llmcli.memory as memory_mod
+    import llmcode.memory as memory_mod
 
     # Seed + persist a conversation-memory record for this project.
     repl.agent.memory.add("a remembered project fact")
@@ -451,9 +451,9 @@ def test_fresh_launch_no_session_prints_no_hint(monkeypatch, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "last session" not in out
     assert "↩" not in out
-    # The startup banner replaces the old flat "llm-cli ready." line; it still
+    # The startup banner replaces the old flat "llmcode ready." line; it still
     # shows the app name + a "ready" marker.
-    assert "llm-cli" in out and "ready" in out
+    assert "llmcode" in out and "ready" in out
 
 
 def test_one_shot_run_once_without_session(monkeypatch, tmp_path):

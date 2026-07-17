@@ -3,7 +3,7 @@
 Local models post-trained on Claude Code / OpenAI tool schemas emit the WRONG
 parameter KEY — `file_path` instead of `path`, `old_string`/`new_string` instead
 of `old`/`new`, `cmd` instead of `command`. The value is right; only the key name
-disagrees with llmc's schema, so a strict `args.get("path")` saw None and the
+disagrees with llmcode's schema, so a strict `args.get("path")` saw None and the
 call failed forever ("write_file requires a string 'path'"). normalize_tool_args
 maps the aliases onto the canonical keys so the call just works.
 """
@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llmcli.agent import Agent
-from llmcli.tools import normalize_tool_args
+from llmcode.agent import Agent
+from llmcode.tools import normalize_tool_args
 
 
 # --- unit: the normalizer ---------------------------------------------------- #

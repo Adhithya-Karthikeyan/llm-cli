@@ -18,11 +18,11 @@ import json
 
 import pytest
 
-from llmcli.code_index import CodeIndex
-from llmcli.config import Config, load_config, save_config
-from llmcli.memory import MemoryStore
-from llmcli.providers import MockProvider
-from llmcli.rerank import rerank, rerank_enabled
+from llmcode.code_index import CodeIndex
+from llmcode.config import Config, load_config, save_config
+from llmcode.memory import MemoryStore
+from llmcode.providers import MockProvider
+from llmcode.rerank import rerank, rerank_enabled
 
 
 # --------------------------------------------------------------------------- #
@@ -206,7 +206,7 @@ def test_memory_rerank_failure_falls_back_to_fused_order():
 # --------------------------------------------------------------------------- #
 
 def _seeded_index(tmp_path) -> CodeIndex:
-    from llmcli.code_index import CodeIndex as _CI
+    from llmcode.code_index import CodeIndex as _CI
     for rel, body in [
         ("toggle.py", "def mcp_toggle():\n    return True\n"),
         ("files.py", "def read_file(path, offset, limit):\n    return slice\n"),
@@ -294,7 +294,7 @@ def test_rerank_round_trips(tmp_path):
 
 @pytest.fixture
 def repl(monkeypatch):
-    import llmcli.repl as r
+    import llmcode.repl as r
     cfg = Config(
         provider="mock", private=True,
         base_url="http://127.0.0.1:1234/v1", model="m", seed=None,

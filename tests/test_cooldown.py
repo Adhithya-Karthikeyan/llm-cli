@@ -1,4 +1,4 @@
-"""Tests for llmcli.cooldown thermal pacing.
+"""Tests for llmcode.cooldown thermal pacing.
 
 All tests use a fake clock (explicit ``now=`` values) and a recording fake
 sleep so the real :func:`time.sleep` is NEVER invoked. Each test resets the
@@ -7,7 +7,7 @@ module config to defaults so process-global state does not leak between tests.
 
 import pytest
 
-from llmcli import cooldown
+from llmcode import cooldown
 
 
 class FakeSleep:

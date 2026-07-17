@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import json
 
-from llmcli import __main__ as cli
-from llmcli.config import Config
+from llmcode import __main__ as cli
+from llmcode.config import Config
 
 
 # ----- --auto-pilot rename + back-compat aliases --------------------------

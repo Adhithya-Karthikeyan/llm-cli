@@ -1,15 +1,15 @@
-"""Tests for llmcli.rules — project conventions/rules auto-loading."""
+"""Tests for llmcode.rules — project conventions/rules auto-loading."""
 
 from __future__ import annotations
 
-from llmcli import rules
+from llmcode import rules
 
 
 def test_rules_filenames_priority_order():
     assert rules.RULES_FILENAMES == (
         "AGENTS.md",
-        "LLMCLI.md",
-        ".llmclirules",
+        "LLMCODE.md",
+        ".llmcoderules",
         "CONVENTIONS.md",
     )
 

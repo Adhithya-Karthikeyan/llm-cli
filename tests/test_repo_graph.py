@@ -1,4 +1,4 @@
-"""Tests for the dependency-graph PageRank ranker (llmcli.repo_graph).
+"""Tests for the dependency-graph PageRank ranker (llmcode.repo_graph).
 
 Covers per-language import extraction, PageRank ranking sanity, the small/
 edgeless fallback to flat order, the cache key changing when a file is added,
@@ -7,7 +7,7 @@ and the per-file parse-error robustness (a bad file never raises).
 
 from __future__ import annotations
 
-from llmcli import repo_graph
+from llmcode import repo_graph
 
 
 # ----- Python import extraction (relative + absolute) ----------------------

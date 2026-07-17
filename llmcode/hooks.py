@@ -8,7 +8,7 @@ import or edit any other part of the package.
 
 Config source
 -------------
-``~/.llm-cli/hooks.json`` (same location convention as ``mcp.json``). It is
+``~/.llmcode/hooks.json`` (same location convention as ``mcp.json``). It is
 OPT-IN: a missing or malformed file yields ``{}`` and the CLI behaves exactly
 as before. Shape::
 
@@ -37,9 +37,9 @@ Contracts
 Security note
 -------------
 The MODEL-controlled tool arguments are passed to your hook as DATA only — via
-the ``LLMC_TOOL_NAME``/``LLMC_TOOL_ARGS`` environment variables and on stdin —
+the ``LLMCODE_TOOL_NAME``/``LLMCODE_TOOL_ARGS`` environment variables and on stdin —
 never as part of the command line. Your hook ``command`` string comes solely
-from your own ``hooks.json``. Treat ``$LLMC_TOOL_ARGS`` as UNTRUSTED input:
+from your own ``hooks.json``. Treat ``$LLMCODE_TOOL_ARGS`` as UNTRUSTED input:
 never ``eval``/``source`` it or splice it into a shell command, or you would
 re-introduce an injection the framework deliberately prevents.
 
@@ -61,7 +61,7 @@ from pathlib import Path
 from typing import Any
 
 # Same directory convention as mcp.py's MCP_CONFIG_PATH.
-HOOKS_CONFIG_PATH = Path.home() / ".llm-cli" / "hooks.json"
+HOOKS_CONFIG_PATH = Path.home() / ".llmcode" / "hooks.json"
 
 # The lifecycle events a hook can bind to. Anything else in the config is
 # ignored so an unknown/typo'd key can never accidentally fire.
@@ -102,7 +102,7 @@ def _coerce_timeout(value: Any) -> int:
 
 
 def load_hooks(path: Path | None = None) -> dict[str, list[dict]]:
-    """Load and validate ``~/.llm-cli/hooks.json`` -> normalized hook config.
+    """Load and validate ``~/.llmcode/hooks.json`` -> normalized hook config.
 
     Returns a dict keyed by the events in :data:`HOOK_EVENTS`, each mapping to a
     list of ``{"match": str, "command": str, "timeout": int}`` entries. A
@@ -190,7 +190,7 @@ def _run_hook(
     """
     # Hooks are the operator's own scripts, so (unlike the model-driven
     # run_bash shell) they inherit the real environment by default; callers /
-    # tests can override via `env`. The LLMC_* context vars are always layered
+    # tests can override via `env`. The LLMCODE_* context vars are always layered
     # on top so a hook can read the tool name/args.
     base_env = dict(os.environ if env is None else env)
     base_env.update(extra_env)
@@ -257,21 +257,21 @@ def _run_hook(
 
 
 def _tool_env(tool_name: str, args: Any, result: Any = None) -> dict[str, str]:
-    """Build the LLMC_* env vars a hook receives (never raises)."""
+    """Build the LLMCODE_* env vars a hook receives (never raises)."""
     try:
         args_json = json.dumps(args, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
         args_json = str(args)
     env = {
-        "LLMC_TOOL_NAME": str(tool_name),
-        "LLMC_TOOL_ARGS": _clip(args_json),
+        "LLMCODE_TOOL_NAME": str(tool_name),
+        "LLMCODE_TOOL_ARGS": _clip(args_json),
     }
     if result is not None:
         try:
             result_json = json.dumps(result, ensure_ascii=False, default=str)
         except (TypeError, ValueError):
             result_json = str(result)
-        env["LLMC_TOOL_RESULT"] = _clip(result_json)
+        env["LLMCODE_TOOL_RESULT"] = _clip(result_json)
     return env
 
 
@@ -286,7 +286,7 @@ def run_pre_tool(
     """Run matching PreToolUse hooks as a veto gate before a tool executes.
 
     The tool name and JSON-encoded args are exposed to each hook via the
-    ``LLMC_TOOL_NAME`` / ``LLMC_TOOL_ARGS`` env vars and also piped on stdin.
+    ``LLMCODE_TOOL_NAME`` / ``LLMCODE_TOOL_ARGS`` env vars and also piped on stdin.
 
     Returns:
     * ``{"decision": "allow"}`` if no PreToolUse hook matches or all matching
@@ -305,7 +305,7 @@ def run_pre_tool(
         return {"decision": "allow"}
 
     extra_env = _tool_env(tool_name, args)
-    stdin_text = extra_env["LLMC_TOOL_ARGS"]
+    stdin_text = extra_env["LLMCODE_TOOL_ARGS"]
 
     for entry in entries:
         if not isinstance(entry, dict):
@@ -369,7 +369,7 @@ def run_post_tool(
         return info
 
     extra_env = _tool_env(tool_name, args, result)
-    stdin_text = extra_env["LLMC_TOOL_ARGS"]
+    stdin_text = extra_env["LLMCODE_TOOL_ARGS"]
 
     for entry in entries:
         if not isinstance(entry, dict):
@@ -409,7 +409,7 @@ def run_stop(
     """Run end-of-turn Stop hooks. Fire-and-forget; never blocks or raises.
 
     Returns the same shape as :func:`run_post_tool`. Stop hooks are not tied to
-    a tool, so no LLMC_TOOL_* env vars are set.
+    a tool, so no LLMCODE_TOOL_* env vars are set.
     """
     info: dict[str, Any] = {"ran": 0, "results": []}
     entries = hooks.get("Stop") if isinstance(hooks, dict) else None

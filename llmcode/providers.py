@@ -416,7 +416,7 @@ def _nearest_xml_boundary(body: str, start: int) -> int:
     return end
 
 
-# Param keys that are genuinely scalar across llmc's tools (offsets, limits,
+# Param keys that are genuinely scalar across llmcode's tools (offsets, limits,
 # timeouts, booleans). ONLY these are type-coerced from the XML param text; every
 # other key — crucially the string BODIES path/content/old/new/command/pattern —
 # stays a verbatim string so a one-line content of "42"/"true" is never turned

@@ -5,7 +5,7 @@ LM Studio's OpenAI-compatible server.
 
 Settings precedence (highest first):
   1. Explicit CLI flags (handled in __main__).
-  2. Persisted config file at ~/.llm-cli/config.json.
+  2. Persisted config file at ~/.llmcode/config.json.
   3. Built-in defaults below.
 
 API keys are read from the environment (or a harmless default) and are NEVER
@@ -94,7 +94,7 @@ PERMISSION_MODES = ("default", "auto-edit", "read-only", "plan", "full-auto")
 # unknown persisted value keeps the safe "text" default.
 OUTPUT_FORMATS = ("text", "json")
 
-CONFIG_DIR = Path.home() / ".llm-cli"
+CONFIG_DIR = Path.home() / ".llmcode"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 
 
@@ -297,7 +297,7 @@ class Config:
     # ~32KB ≈ ~8K tokens, where extra context starts visibly slowing local decode.
     # Tune lower to nudge sooner on small models, higher to allow heavier reads.
     read_nudge_bytes: int = 32_000
-    # MCP servers (from ~/.llm-cli/mcp.json) on/off. DEFAULT True (back-compat:
+    # MCP servers (from ~/.llmcode/mcp.json) on/off. DEFAULT True (back-compat:
     # configured servers start and their tools are offered). Turning it OFF stops
     # the server subprocesses AND removes their tools from every request — which
     # shrinks the per-turn prompt (each MCP tool's JSON schema is sent every

@@ -49,8 +49,8 @@ def discover_files(root: Path) -> list[tuple[str, int]]:
 
     Paths are relative to the CURRENT WORKING DIRECTORY (not ``root``), because
     the worker sub-agents' ``read_file`` resolves paths against cwd and confines
-    to the workspace — so a subdir audit (``/audit llmcli``) must hand workers
-    ``llmcli/x.py``, not the root-relative ``x.py`` (which would be unreadable).
+    to the workspace — so a subdir audit (``/audit llmcode``) must hand workers
+    ``llmcode/x.py``, not the root-relative ``x.py`` (which would be unreadable).
     Prunes VCS/vendor/build dirs (walk-time), binary/minified files, and any file
     that sniffs binary or sits outside the workspace.
     """

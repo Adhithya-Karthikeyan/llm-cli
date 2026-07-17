@@ -1,17 +1,17 @@
-"""Tests for llmcli.remediation — the SAFE self-healing tool-retry layer.
+"""Tests for llmcode.remediation — the SAFE self-healing tool-retry layer.
 
 All tests inject an explicit ``project_files`` list so no real repo walk is
 needed, and use ``tmp_path`` for the workspace ``root``. Error strings mirror
-the real messages produced in ``llmcli.tools``.
+the real messages produced in ``llmcode.tools``.
 """
 
 from __future__ import annotations
 
-from llmcli.remediation import remediate
+from llmcode.remediation import remediate
 
 
 def _confine_err(root: str, path: str, verb: str = "read") -> dict:
-    """A workspace-confinement refusal matching llmcli.tools' real text."""
+    """A workspace-confinement refusal matching llmcode.tools' real text."""
     return {
         "ok": False,
         "error": (

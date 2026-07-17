@@ -13,9 +13,9 @@ import signal
 import pytest
 from prompt_toolkit.document import Document
 
-import llmcli.repl as r
-from llmcli.config import Config
-from llmcli.providers import MockProvider
+import llmcode.repl as r
+from llmcode.config import Config
+from llmcode.providers import MockProvider
 
 
 class _FakeMCP:
@@ -72,7 +72,7 @@ def test_completer_offers_slash_commands(monkeypatch, tmp_path):
 
 def test_completer_includes_macros(monkeypatch, tmp_path):
     repl = _make_repl(monkeypatch, tmp_path)
-    cmds = tmp_path / ".llmcli" / "commands"
+    cmds = tmp_path / ".llmcode" / "commands"
     cmds.mkdir(parents=True)
     (cmds / "deploy.md").write_text("do a deploy $ARGUMENTS", encoding="utf-8")
     completer = repl._make_input_completer()
@@ -291,7 +291,7 @@ def test_status_bar_includes_stats_after_turn(monkeypatch, tmp_path):
 def test_status_bar_git_segment(monkeypatch, tmp_path):
     """When cwd is a repo the bar shows branch + '*' when dirty (git helpers are
     stubbed so no subprocess runs)."""
-    import llmcli.gitint as gitint
+    import llmcode.gitint as gitint
     repl = _make_repl(monkeypatch, tmp_path)
     monkeypatch.setattr(gitint, "is_repo", lambda root: True)
     monkeypatch.setattr(gitint, "current_branch", lambda root: "feature")
@@ -303,7 +303,7 @@ def test_status_bar_git_segment(monkeypatch, tmp_path):
 def test_status_bar_callable_reads_cache_without_git(monkeypatch, tmp_path):
     """_status_bar (the bottom_toolbar callable, hit per keystroke) must ONLY read
     the cache — never touch git or recompute — so it stays cheap."""
-    import llmcli.gitint as gitint
+    import llmcode.gitint as gitint
     repl = _make_repl(monkeypatch, tmp_path)
     sentinel = "SENTINEL_CACHE"
     repl._status_cache = sentinel
@@ -374,7 +374,7 @@ class _FakeSession:
 
 def test_macro_slash_routes_to_dispatch(monkeypatch, tmp_path):
     repl = _make_repl(monkeypatch, tmp_path)
-    cmds = tmp_path / ".llmcli" / "commands"
+    cmds = tmp_path / ".llmcode" / "commands"
     cmds.mkdir(parents=True)
     (cmds / "greet.md").write_text("say hello $ARGUMENTS", encoding="utf-8")
 

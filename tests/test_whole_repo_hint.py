@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from llmcli.repl import looks_like_whole_repo_request
+from llmcode.repl import looks_like_whole_repo_request
 
 
 @pytest.mark.parametrize(

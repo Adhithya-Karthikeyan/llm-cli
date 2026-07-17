@@ -4,7 +4,7 @@ re-prompts the model ONCE to write its answer instead of giving up immediately.
 
 from __future__ import annotations
 
-from llmcli.agent import Agent
+from llmcode.agent import Agent
 
 _EMPTY = [{"type": "done", "finish_reason": "stop", "output_tokens": 0}]  # no text, no tools
 _ANSWER = [

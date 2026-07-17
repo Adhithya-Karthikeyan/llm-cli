@@ -1,6 +1,6 @@
 """CLI entry point.
 
-`python -m llmcli` and the `llmcli` console script (with `llmc` as a short
+`python -m llmcode` and the `llmcode` console script (with `llmcode` as a short
 alias) both call :func:`main`.
 
 Flags:
@@ -25,8 +25,8 @@ Flags:
   --save                    persist the given flags as the new default
 
 CLI flags are SESSION-ONLY overrides and do NOT change your saved defaults in
-~/.llm-cli/config.json unless you pass --save. This prevents a throwaway run
-like `llmc --provider mock -p ...` from silently clobbering your default
+~/.llmcode/config.json unless you pass --save. This prevents a throwaway run
+like `llmcode --provider mock -p ...` from silently clobbering your default
 provider/model. (Inside the REPL, /provider and /model still persist, since
 those are explicit deliberate changes.)
 """
@@ -53,7 +53,7 @@ from .tools import set_private
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
-        prog="llmcli",
+        prog="llmcode",
         description="A lightweight, personal agentic CLI for LOCAL LLMs (LM Studio).",
     )
     parser.add_argument(
@@ -66,10 +66,10 @@ def _parse_args(argv):
     # dest="continue_" because "continue" is a Python keyword (not a valid
     # identifier for args.continue). Resumes this project's saved session at
     # startup: the REPL loads it before the first turn; a one-shot (-p) prepends
-    # the saved history. Session memory is LOCAL-ONLY (~/.llm-cli/sessions).
+    # the saved history. Session memory is LOCAL-ONLY (~/.llmcode/sessions).
     parser.add_argument(
         "-c", "--continue", dest="continue_", action="store_true",
-        help="Resume this project's saved session (from ~/.llm-cli/sessions) "
+        help="Resume this project's saved session (from ~/.llmcode/sessions) "
              "at startup. Without it, a fresh launch starts clean (use /resume "
              "in the REPL to load it later).",
     )
@@ -126,7 +126,7 @@ def _parse_args(argv):
     )
     parser.add_argument(
         "--mcp", choices=["on", "off"], default=None,
-        help="Enable/disable MCP servers (from ~/.llm-cli/mcp.json) for this "
+        help="Enable/disable MCP servers (from ~/.llmcode/mcp.json) for this "
              "session. 'off' starts no servers and offers no MCP tools (smaller "
              "prompt, faster). Session-only unless --save. Toggle in-REPL with "
              "/mcp on|off.",
@@ -194,7 +194,7 @@ def _parse_args(argv):
     )
     parser.add_argument(
         "--save", action="store_true",
-        help="Persist the given flags as the new default in ~/.llm-cli/config.json.",
+        help="Persist the given flags as the new default in ~/.llmcode/config.json.",
     )
     # SEED flag (Feature: reproducibility): when set, the MockProvider uses the
     # seed to produce a deterministic scenario. For local models, the seed is
@@ -223,7 +223,7 @@ def main(argv=None) -> int:
     config = load_config()
     # CLI flags are SESSION-ONLY overrides applied on top of the saved config.
     # They are NOT written back unless --save is given, so a throwaway run like
-    # `llmc --provider mock -p ...` can never clobber the user's saved default.
+    # `llmcode --provider mock -p ...` can never clobber the user's saved default.
     if args.provider is not None:
         config.provider = args.provider
     if args.model is not None:

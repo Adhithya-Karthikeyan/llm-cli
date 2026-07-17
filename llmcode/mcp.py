@@ -51,7 +51,7 @@ from .tools import Tool, _MAX_OUTPUT, _truncate
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0]
 
-CLIENT_NAME = "llmcli"
+CLIENT_NAME = "llmcode"
 CLIENT_VERSION = "0.1.0"
 
 # Default per-request read timeout (seconds). A wedged server can never hang the
@@ -73,7 +73,7 @@ _CHILD_ENV_ALLOWLIST = (
     "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "TERM", "TZ",
 )
 # Config file (Claude Desktop format).
-MCP_CONFIG_PATH = Path.home() / ".llm-cli" / "mcp.json"
+MCP_CONFIG_PATH = Path.home() / ".llmcode" / "mcp.json"
 
 
 class MCPError(Exception):
@@ -90,7 +90,7 @@ class MCPTimeoutError(MCPError):
 
 
 def load_mcp_config(path: Path = MCP_CONFIG_PATH) -> dict[str, dict]:
-    """Load ``~/.llm-cli/mcp.json`` (Claude Desktop format) -> {name: spec}.
+    """Load ``~/.llmcode/mcp.json`` (Claude Desktop format) -> {name: spec}.
 
     Format::
 

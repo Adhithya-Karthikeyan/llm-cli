@@ -1,7 +1,7 @@
-"""Image-attachment tests (llmcli/images.py + agent/repl/session wiring).
+"""Image-attachment tests (llmcode/images.py + agent/repl/session wiring).
 
 All offline/deterministic: a MockProvider, temp files, and a temp HOME so the
-session round-trip never touches the real ~/.llm-cli. Covers the pure encoder
+session round-trip never touches the real ~/.llmcode. Covers the pure encoder
 (valid bytes -> data url + mime, oversized + missing + non-image rejection), the
 ``text_of`` content-shape helper, the agent's STRING-vs-LIST content decision
 (text-only path must stay byte-identical for the prompt cache), token-estimation
@@ -15,11 +15,11 @@ import base64
 
 import pytest
 
-import llmcli.repl as r
-import llmcli.session as s
-from llmcli.agent import Agent
-from llmcli.config import Config
-from llmcli.images import (
+import llmcode.repl as r
+import llmcode.session as s
+from llmcode.agent import Agent
+from llmcode.config import Config
+from llmcode.images import (
     MAX_IMAGE_BYTES,
     encode_image,
     encode_image_bytes,
@@ -28,7 +28,7 @@ from llmcli.images import (
     normalize_dropped_path,
     text_of,
 )
-from llmcli.providers import MockProvider
+from llmcode.providers import MockProvider
 
 # A real 1x1 transparent PNG (so the encoder sees genuine image bytes).
 _PNG_1X1 = base64.b64decode(

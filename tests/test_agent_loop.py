@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from llmcli.agent import Agent
-from llmcli.providers import MockProvider
-from llmcli.tools import FULL, get_tool
+from llmcode.agent import Agent
+from llmcode.providers import MockProvider
+from llmcode.tools import FULL, get_tool
 
 
 def test_agent_executes_tool_and_feeds_result(tmp_workspace):
@@ -438,7 +438,7 @@ def test_unknown_tool_no_suggestion_when_nothing_close(tmp_workspace):
 def test_tool_exception_is_caught(tmp_workspace, monkeypatch):
     """finding #20: a tool fn that RAISES is caught -> {'ok':False,'error':type}
     fed back, loop never dies."""
-    import llmcli.tools as tools_mod
+    import llmcode.tools as tools_mod
 
     boom = tools_mod.Tool(
         name="glob",  # reuse a known name so it's in the schema/registry
@@ -642,7 +642,7 @@ def test_spawn_agent_forwards_confirm_fn(tmp_workspace, monkeypatch):
     orchestrator was given, never builtin input(). We make input() raise, give
     spawn a confirm_fn that approves, and have the spawned coder call a gated
     tool — it must execute via the forwarded confirm."""
-    from llmcli.orchestration import make_spawn_agent_tool
+    from llmcode.orchestration import make_spawn_agent_tool
 
     def _boom(*a, **k):
         raise AssertionError("builtin input() must not be used by a sub-agent")
@@ -677,7 +677,7 @@ def test_repl_wires_non_input_confirm_fn(tmp_workspace, monkeypatch):
     returns 'y', wire it through make_ptk_confirm, and run a gated tool. The tool
     must execute via the injected confirm (proving builtin input() is unused).
     """
-    from llmcli.repl import make_ptk_confirm
+    from llmcode.repl import make_ptk_confirm
 
     def _boom(*a, **k):
         raise AssertionError("builtin input() must not be used in the REPL path")

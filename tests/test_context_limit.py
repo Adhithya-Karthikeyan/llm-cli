@@ -5,9 +5,9 @@ Regression for: compaction firing at 24k while qwen has a 262,144 (256k) window.
 
 from __future__ import annotations
 
-from llmcli.config import Config
-from llmcli.providers import _pick_context_length
-from llmcli.repl import _effective_soft_limit
+from llmcode.config import Config
+from llmcode.providers import _pick_context_length
+from llmcode.repl import _effective_soft_limit
 
 
 class _Prov:

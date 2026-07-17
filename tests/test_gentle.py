@@ -13,9 +13,9 @@ import json
 
 import pytest
 
-import llmcli.repl as r
-from llmcli.config import Config, load_config, save_config
-from llmcli.providers import MockProvider, effective_max_tokens
+import llmcode.repl as r
+from llmcode.config import Config, load_config, save_config
+from llmcode.providers import MockProvider, effective_max_tokens
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ def test_gentle_cap_bypassed_when_tools_present():
     """The gentle token cap must NOT be sent on a TOOL-capable turn — a tool call
     carries the whole file content in its args, so a 1024 cap truncates the write.
     Pure-chat turns keep the cap. This is the fix for write_file truncation."""
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     prov = LocalProvider(model="m", base_url="http://127.0.0.1:1234/v1", api_key="k",
                          gentle_mode=True, gentle_max_tokens=1024, max_output_tokens=None)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llmcli.config import Config, load_config
+from llmcode.config import Config, load_config
 
 
 def test_corrupt_config_warns_and_uses_defaults(tmp_path, capsys):
@@ -17,7 +17,7 @@ def test_corrupt_config_warns_and_uses_defaults(tmp_path, capsys):
 
 def test_mcp_enabled_defaults_on_and_round_trips(tmp_path):
     import json
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     assert Config().mcp_enabled is True  # back-compat: on by default
     p = tmp_path / "config.json"
@@ -70,7 +70,7 @@ def test_bad_theme_falls_back_to_default(tmp_path):
 
 
 def test_theme_round_trips_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(Config(theme="ansi"), path=p)
@@ -109,7 +109,7 @@ def test_max_output_tokens_missing_stays_none(tmp_path):
 
 
 def test_max_output_tokens_round_trips_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(Config(max_output_tokens=2048), path=p)
@@ -172,7 +172,7 @@ def test_empty_embed_model_ignored(tmp_path):
 
 
 def test_memory_fields_round_trip_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(
@@ -223,7 +223,7 @@ def test_temperature_rejects_out_of_range_and_bool(tmp_path):
 
 
 def test_temperature_round_trips_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(Config(temperature=0.5), path=p)
@@ -265,7 +265,7 @@ def test_quality_flags_reject_wrong_types(tmp_path):
 
 
 def test_quality_flags_round_trip_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(
@@ -293,7 +293,7 @@ def test_foundation_field_defaults_preserve_current_behavior():
 
 
 def test_permission_mode_loads_valid(tmp_path):
-    from llmcli.config import PERMISSION_MODES
+    from llmcode.config import PERMISSION_MODES
 
     assert PERMISSION_MODES == ("default", "auto-edit", "read-only", "plan", "full-auto")
     p = tmp_path / "config.json"
@@ -311,7 +311,7 @@ def test_permission_mode_rejects_unknown_and_wrong_type(tmp_path):
 
 
 def test_output_format_loads_valid_and_rejects_bad(tmp_path):
-    from llmcli.config import OUTPUT_FORMATS
+    from llmcode.config import OUTPUT_FORMATS
 
     assert OUTPUT_FORMATS == ("text", "json")
     p = tmp_path / "config.json"
@@ -356,7 +356,7 @@ def test_foundation_bool_fields_load_valid(tmp_path):
 
 
 def test_foundation_fields_round_trip_through_save(tmp_path):
-    from llmcli.config import save_config
+    from llmcode.config import save_config
 
     p = tmp_path / "config.json"
     save_config(

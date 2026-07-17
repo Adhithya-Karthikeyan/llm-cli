@@ -77,7 +77,7 @@ from .providers import (
 )
 from .tools import set_private
 
-# Authoritative set of llmc's OWN slash commands. The main input loop only
+# Authoritative set of llmcode's OWN slash commands. The main input loop only
 # intercepts a leading-slash line when its first token is in here; anything else
 # (e.g. "/build the app" referencing ANOTHER project's CLI) is sent to the model.
 # _dispatch_slash handles exactly these — keep the two in sync.
@@ -150,7 +150,7 @@ Commands:
   /branch [tag]         Save (no arg: list) a named snapshot of this conversation
   /fork <tag>           Load a saved branch snapshot and continue from it
   /doctor               Run environment/health checks (provider, git, sandbox, …)
-  /commands             List project macros in .llmcli/commands/*.md
+  /commands             List project macros in .llmcode/commands/*.md
   /clear                Clear the conversation history
   /resume               Reload this project's saved session (local-only memory)
   /forget               Delete this project's saved session
@@ -162,7 +162,7 @@ Anything else is sent to the agent.
 Lines starting with an unknown /command are sent to the model (so you can work on
 projects that use their own / commands, e.g. /build or /deploy).
 Start a line with // to send a literal leading slash to the model (e.g.
-"//model …" chats ABOUT the command instead of running llmc's /model).
+"//model …" chats ABOUT the command instead of running llmcode's /model).
 
 NETWORK (default): network enabled; web_fetch is SSRF-safe (blocks
 internal/metadata, validates redirects, http/https only) and confirmation-gated;
@@ -197,7 +197,7 @@ Speed (tok/s) — what controls it and how to raise it
 
 1) BIGGEST factor: context size. The model re-reads the whole conversation for
    every token it writes, so tok/s drops as the chat (and tool output) grows.
-   - llmcli AUTO-trims the live context to an adaptive budget after each turn
+   - llmcode AUTO-trims the live context to an adaptive budget after each turn
      (tight for simple asks, larger for big ones). Tune with /context <N|auto|
      fixed|off>; smaller = faster.
    - /compact (aggressive — summarize all but the last exchange) or /clear to
@@ -626,7 +626,7 @@ _COMMAND_META = {
 def _build_input_completer(repl):
     """Build the REPL input-line completer (lazily imports prompt_toolkit).
 
-    Returns a prompt_toolkit ``Completer`` that (a) completes llmc slash commands
+    Returns a prompt_toolkit ``Completer`` that (a) completes llmcode slash commands
     and loaded macros while the line's first token starts with ``/``, and (b)
     fuzzy-completes workspace-relative files for the ``@word`` under the cursor.
     The completer NEVER raises (an exception would break line input) and yields
@@ -1032,7 +1032,7 @@ def _build_orchestrator(
     # the ORCHESTRATOR gets it; sub-agents stay on the no-memory defaults.
     mem = memory.MemoryStore.load(memory.store_path(workspace))
     # System prompt = orchestrator body + (optionally) the project rules block so
-    # user-authored conventions (AGENTS.md/LLMCLI.md/…) become binding context.
+    # user-authored conventions (AGENTS.md/LLMCODE.md/…) become binding context.
     # Best-effort: rules_prompt_block returns "" when no rules file exists.
     sp = orchestrator_prompt(has_memory_tool=has_memory_tool, workspace=workspace)
     if config.rules_file_enabled:
@@ -1131,7 +1131,7 @@ def run_once(
 ) -> str:
     """Run a single prompt through a fresh orchestrator and return final text.
 
-    Connects MCP servers (if ~/.llm-cli/mcp.json exists), runs the prompt with
+    Connects MCP servers (if ~/.llmcode/mcp.json exists), runs the prompt with
     their tools merged in, then cleanly shuts them down. With no config file MCP
     is simply off and behavior is unchanged.
 
@@ -1489,7 +1489,7 @@ class Repl:
         # expand=False panel.)
         self.console.print(Align.center(Panel(
             Group(head, sub), box=box.ROUNDED, border_style=pal.accent,
-            title="llm-cli", title_align="left", padding=(0, 1),
+            title="llmcode", title_align="left", padding=(0, 1),
             expand=False,  # hug the content instead of spanning the full width
         )))
         # Keep the privacy posture visible on startup (security transparency),
@@ -1516,7 +1516,7 @@ class Repl:
         statuses = self.mcp.status()
         if not statuses:
             self.console.print(
-                "No MCP servers configured. Add them to ~/.llm-cli/mcp.json "
+                "No MCP servers configured. Add them to ~/.llmcode/mcp.json "
                 "(Claude Desktop format).",
                 style="dim",
             )
@@ -2072,7 +2072,7 @@ class Repl:
         elif cmd == "/commands":
             self._cmd_commands(arg)
         else:
-            # CUSTOM MACRO fallback: a project may define <cwd>/.llmcli/commands/
+            # CUSTOM MACRO fallback: a project may define <cwd>/.llmcode/commands/
             # <name>.md files; a matching /<name> expands the file (with $ARGUMENTS
             # substituted) and is submitted as if the user typed that text.
             macro = self._macros().get(cmd)
@@ -2481,7 +2481,7 @@ class Repl:
         self._ok(f"[mode -> {name}]  {self._status()}")
 
     def _branch_path(self, tag: str):
-        """Path to a tagged conversation snapshot for the cwd (~/.llm-cli/sessions).
+        """Path to a tagged conversation snapshot for the cwd (~/.llmcode/sessions).
 
         Keyed by ``<project-id>--branch-<tag>`` so tagged snapshots sit next to the
         regular session file and never collide across projects.
@@ -2552,7 +2552,7 @@ class Repl:
     def _cmd_doctor(self, arg: str) -> None:
         """Run environment/health checks and print pass/✗ with fix hints."""
         cwd = os.getcwd()
-        self._ok("llm-cli doctor:")
+        self._ok("llmcode doctor:")
         success_style = palette_for(self.config.theme).success
 
         def _line(ok: bool, label: str, detail: str = "") -> None:
@@ -2624,10 +2624,10 @@ class Repl:
         except Exception:  # noqa: BLE001
             writable = False
         _line(writable, "checkpoints dir writable",
-              "" if writable else "cannot write ~/.llm-cli/checkpoints — /undo disabled")
+              "" if writable else "cannot write ~/.llmcode/checkpoints — /undo disabled")
 
     def _macros(self) -> dict:
-        """Discover project macros in ``<cwd>/.llmcli/commands/*.md`` (cached).
+        """Discover project macros in ``<cwd>/.llmcode/commands/*.md`` (cached).
 
         Returns ``{"/name": Path}``. A missing directory yields ``{}``. Cached per
         session on first use. Never raises.
@@ -2639,7 +2639,7 @@ class Repl:
 
         macros: dict = {}
         try:
-            base = Path(os.getcwd()) / ".llmcli" / "commands"
+            base = Path(os.getcwd()) / ".llmcode" / "commands"
             if base.is_dir():
                 for p in base.glob("*.md"):
                     if p.is_file():
@@ -2662,11 +2662,11 @@ class Repl:
         return text.replace("$ARGUMENTS", arg)
 
     def _cmd_commands(self, arg: str) -> None:
-        """List available project macros (from ``<cwd>/.llmcli/commands/*.md``)."""
+        """List available project macros (from ``<cwd>/.llmcode/commands/*.md``)."""
         macros = self._macros()
         if not macros:
             self.console.print(
-                "no project macros. Add <name>.md files under .llmcli/commands/ "
+                "no project macros. Add <name>.md files under .llmcode/commands/ "
                 "to define /<name> shortcuts ($ARGUMENTS is substituted).",
                 style="dim",
             )
@@ -3094,7 +3094,7 @@ class Repl:
 
         history = None
         try:
-            hist_path = os.path.expanduser("~/.llm-cli/history")
+            hist_path = os.path.expanduser("~/.llmcode/history")
             os.makedirs(os.path.dirname(hist_path), exist_ok=True)
             history = FileHistory(hist_path)
         except OSError:
@@ -3242,17 +3242,17 @@ class Repl:
                     stripped.split(maxsplit=1)[0].lower() in _KNOWN_COMMANDS
                     or stripped.split(maxsplit=1)[0].lower() in self._macros()
                 ):
-                    # One of llmc's OWN commands OR a loaded project macro
-                    # (/<name> from .llmcli/commands/) -> handle it locally.
+                    # One of llmcode's OWN commands OR a loaded project macro
+                    # (/<name> from .llmcode/commands/) -> handle it locally.
                     if not self._dispatch_slash(line):
                         self._save_session()  # /exit | /quit: persist before leaving
                         self.console.print("Bye.")
                         return
                     continue
                 # else: either a normal (non-slash) message, OR a leading-slash line
-                # whose first token is NOT an llmc command (e.g. "/build the app"
+                # whose first token is NOT an llmcode command (e.g. "/build the app"
                 # for another project's CLI). Either way the WHOLE line goes to the
-                # model below — llmc only intercepts its own commands, never prints
+                # model below — llmcode only intercepts its own commands, never prints
                 # "Unknown command" here.
                 # Feature 2: a whole-project free-text question gets a one-line
                 # hint pointing at /audit (map-reduce, keeps context small). We

@@ -11,8 +11,8 @@ code_search into a spawned sub-agent lives in test_orchestration.py.
 
 from __future__ import annotations
 
-import llmcli.code_index as ci
-from llmcli.code_index import (
+import llmcode.code_index as ci
+from llmcode.code_index import (
     CodeChunk,
     CodeIndex,
     _chunk_file,
@@ -20,8 +20,8 @@ from llmcli.code_index import (
     index_path,
     make_code_search_tool,
 )
-from llmcli.providers import MockProvider
-from llmcli.session import session_id
+from llmcode.providers import MockProvider
+from llmcode.session import session_id
 
 
 # --------------------------------------------------------------------------- #
@@ -461,8 +461,8 @@ def test_index_path_shape(tmp_path):
 
 def _pin_home(tmp_path, monkeypatch):
     """Point Path.home() at tmp so the tool's index save lands under tmp, not the
-    real ~/.llm-cli (mirrors test_session)."""
-    import llmcli.session as s
+    real ~/.llmcode (mirrors test_session)."""
+    import llmcode.session as s
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HOME", str(home))
@@ -523,7 +523,7 @@ def test_tool_result_is_byte_capped(tmp_path, monkeypatch):
     ci._INDEX_CACHE.clear()
     tool = make_code_search_tool(provider=None, workspace=str(ws))
     out = tool.fn({"query": "fn_match_0", "top_k": 50})
-    from llmcli.tools import _MAX_OUTPUT
+    from llmcode.tools import _MAX_OUTPUT
     assert len(out["result"].encode("utf-8")) <= _MAX_OUTPUT + 32  # cap + marker slack
 
 
@@ -534,7 +534,7 @@ def test_tool_persists_index_across_instances(tmp_path, monkeypatch):
     ci._INDEX_CACHE.clear()
     make_code_search_tool(provider=None, workspace=str(ws)).fn({"query": "multiply"})
     # The on-disk index now exists and a fresh load sees the chunks.
-    from llmcli.code_index import CodeIndex as _CI
+    from llmcode.code_index import CodeIndex as _CI
     loaded = _CI.load(index_path(str(ws)))
     assert any(c.path == "math.py" for c in loaded.chunks)
 
@@ -690,7 +690,7 @@ def test_tool_emits_chunk_cap_warning(tmp_path, monkeypatch):
 def test_bm25_cached_index_matches_fresh_recompute(tmp_path):
     """Regression: the cached _BM25Index produces IDENTICAL scores to a fresh
     recompute via _bm25_over_tokenized — pure caching, no scoring change."""
-    from llmcli.memory import (
+    from llmcode.memory import (
         _bm25_over_tokenized,
         _build_bm25_index,
         _bm25_score_index,
@@ -808,7 +808,7 @@ def test_tool_result_capped_to_code_search_budget(tmp_path, monkeypatch):
     ci._INDEX_CACHE.clear()
     tool = make_code_search_tool(provider=None, workspace=str(ws))
     out = tool.fn({"query": "fn_match_0", "top_k": 2000})
-    from llmcli.tools import _MAX_OUTPUT
+    from llmcode.tools import _MAX_OUTPUT
     size = len(out["result"].encode("utf-8"))
     assert ci.CODE_SEARCH_MAX_OUTPUT < _MAX_OUTPUT             # budget is the tighter one
     assert size <= ci.CODE_SEARCH_MAX_OUTPUT + 32             # truncated below the budget

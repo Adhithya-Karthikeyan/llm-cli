@@ -896,7 +896,7 @@ class Agent:
         # When True, snapshot a file's on-disk bytes right before a write/edit so
         # a bad edit is one /undo away. DEFAULT off — no checkpoint machinery runs.
         self.checkpoints_enabled = bool(checkpoints_enabled)
-        # Loaded lifecycle-hook config (llmcli.hooks.load_hooks shape) or None.
+        # Loaded lifecycle-hook config (llmcode.hooks.load_hooks shape) or None.
         # DEFAULT None -> the pre/post-tool hook calls are complete no-ops.
         self.hooks = hooks or None
         # Optional threading.Event-like with .is_set(); when set mid-run the loop
@@ -1147,7 +1147,7 @@ class Agent:
         # (reference design): a plain bordered frame whose border reads in the
         # theme's accent. The is_terminal gate keeps piped/scripted one-shot output
         # clean PLAIN Markdown — the box glyphs are literal text, so without this
-        # guard `llmc "q" > out.txt` would interleave border chars into the answer.
+        # guard `llmcode "q" > out.txt` would interleave border chars into the answer.
         # Nested sub-agents (non-empty line_prefix) and accent-less agents always
         # render plain Markdown so the box never collides with the "↳" marker and
         # old (byte-clean) behaviour holds.

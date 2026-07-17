@@ -8,8 +8,8 @@ import sys
 
 import pytest
 
-from llmcli.agent import compute_tok_stats, format_footer
-from llmcli.providers import (
+from llmcode.agent import compute_tok_stats, format_footer
+from llmcode.providers import (
     MockProvider,
     _clean_reasoning_text,
     _fence_is_sole_content,
@@ -183,7 +183,7 @@ class _FakeStream:
 
 
 def _local_with_stream(chunks, **provider_kwargs):
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k", **provider_kwargs)
     stream = _FakeStream(chunks)
@@ -488,7 +488,7 @@ def test_local_closes_stream_on_early_break():
 # ----- error redaction (finding #17) --------------------------------------
 
 def test_local_get_client_error_redacts_detail(monkeypatch):
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k")
 
@@ -511,7 +511,7 @@ def test_local_mid_stream_error_redacts():
         def close(self):
             pass
 
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k")
     rs = _RaisingStream()
@@ -540,7 +540,7 @@ def _capture_get_client_kwargs(monkeypatch, base_url, private=False):
     """Run _get_client with a fake openai (real httpx) and return its kwargs."""
     import types
 
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     captured: dict = {}
 
@@ -666,7 +666,7 @@ def test_mock_embeddings_batch_shape():
 
 
 def test_mock_embeddings_shared_tokens_score_higher():
-    from llmcli.memory import cosine
+    from llmcode.memory import cosine
 
     p = MockProvider()
     a = p.embeddings(["mcp toggle command"])[0]
@@ -676,7 +676,7 @@ def test_mock_embeddings_shared_tokens_score_higher():
 
 
 def test_local_embeddings_requires_embed_model():
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     lp = LocalProvider(model="m", base_url="http://x/v1", api_key="k")  # embed_model None
     with pytest.raises(ValueError):
@@ -684,7 +684,7 @@ def test_local_embeddings_requires_embed_model():
 
 
 def test_local_embeddings_returns_vectors_via_client():
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     class _Emb:
         def __init__(self, e):
@@ -708,7 +708,7 @@ def test_local_embeddings_returns_vectors_via_client():
 
 
 def test_local_embeddings_redacts_error_to_type_name():
-    from llmcli.providers import LocalProvider
+    from llmcode.providers import LocalProvider
 
     class _Embeddings:
         def create(self, model, input):
@@ -727,24 +727,24 @@ def test_local_embeddings_redacts_error_to_type_name():
 
 
 def test_providers_import_without_openai():
-    # Ensure llmcli.providers is importable even if 'openai' is absent.
+    # Ensure llmcode.providers is importable even if 'openai' is absent.
     saved = sys.modules.pop("openai", None)
     # importlib.reload re-runs the module body IN PLACE on the same module
     # object, replacing class objects with NEW identities. Every other module
-    # that did `from llmcli.providers import MockProvider/LocalProvider` (and
+    # that did `from llmcode.providers import MockProvider/LocalProvider` (and
     # every test that captured those names at import/collection time) still
     # holds the ORIGINAL class objects, so an isinstance() across them breaks
     # for the rest of the suite. Snapshot the originals and restore them in
     # finally so the reload this test needs does not leak new identities.
-    import llmcli.providers as _prov
+    import llmcode.providers as _prov
     _orig_classes = {
         k: getattr(_prov, k)
         for k in ("MockProvider", "LocalProvider", "Provider")
     }
     try:
         sys.modules["openai"] = None  # force ImportError on `import openai`
-        importlib.reload(importlib.import_module("llmcli.providers"))
-        mod = importlib.import_module("llmcli.providers")
+        importlib.reload(importlib.import_module("llmcode.providers"))
+        mod = importlib.import_module("llmcode.providers")
         # MockProvider must work with no openai.
         events = list(mod.MockProvider().stream_chat([], None))
         assert events[-1]["type"] == "done"
@@ -757,8 +757,8 @@ def test_providers_import_without_openai():
             sys.modules["openai"] = saved
         # Reload with openai restored so the module returns to its normal state,
         # then put the ORIGINAL class objects back so identities stay consistent
-        # with every other module's captured `from llmcli.providers import ...`.
-        importlib.reload(importlib.import_module("llmcli.providers"))
+        # with every other module's captured `from llmcode.providers import ...`.
+        importlib.reload(importlib.import_module("llmcode.providers"))
         for k, v in _orig_classes.items():
             setattr(_prov, k, v)
 
@@ -768,7 +768,7 @@ def test_providers_import_without_openai():
 # --------------------------------------------------------------------------- #
 
 def test_build_provider_threads_embed_model():
-    from llmcli.repl import build_provider
+    from llmcode.repl import build_provider
 
     # No network: LocalProvider only imports/builds the openai client on first
     # call, so construction is fully offline.
@@ -781,7 +781,7 @@ def test_build_provider_threads_embed_model():
 
 
 def test_build_provider_defaults_embed_model_none():
-    from llmcli.repl import build_provider
+    from llmcode.repl import build_provider
 
     prov = build_provider(name="local", model="m", base_url="http://127.0.0.1:1234/v1")
     assert prov.embed_model is None
@@ -790,8 +790,8 @@ def test_build_provider_defaults_embed_model_none():
 def test_config_embed_model_flows_to_provider():
     # Simulate the orchestrator/startup build path: the config's embed_model must
     # reach the constructed provider (the bug was build_provider dropping it).
-    from llmcli.config import Config
-    from llmcli.repl import build_provider
+    from llmcode.config import Config
+    from llmcode.repl import build_provider
 
     config = Config(embed_model="nomic-test-embed")
     prov = build_provider(
@@ -808,7 +808,7 @@ def test_extract_text_tool_calls_no_sigil_returns_none_fast():
     """A long pure-chat answer with no tool-call sigil must return None without
     running any parser (the common-path short-circuit, ~3 full-text regex passes
     avoided)."""
-    from llmcli.providers import extract_text_tool_calls
+    from llmcode.providers import extract_text_tool_calls
 
     # A long answer that contains none of the sigils: no DeepSeek begin token,
     # no <function=, no <|python_tag|>, no [TOOL_CALLS], no triple backticks.
@@ -818,7 +818,7 @@ def test_extract_text_tool_calls_no_sigil_returns_none_fast():
 
 def test_extract_text_tool_calls_short_circuit_still_detects_real_call():
     """Sanity: when a sigil IS present the short-circuit must NOT fire."""
-    from llmcli.providers import extract_text_tool_calls
+    from llmcode.providers import extract_text_tool_calls
 
     text = "<function=read_file>{\"path\": \"main.py\"}</function>"
     calls = extract_text_tool_calls(text)

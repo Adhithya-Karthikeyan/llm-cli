@@ -7,7 +7,7 @@ The fake server's tools (echo/add) had no underscores, so the gap was missed.
 
 from __future__ import annotations
 
-from llmcli.mcp import _make_tool
+from llmcode.mcp import _make_tool
 
 
 def test_make_tool_allows_snake_case():

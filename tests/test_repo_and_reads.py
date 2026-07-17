@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from llmcli.tools import _edit_file, _read_file, _repo_map
+from llmcode.tools import _edit_file, _read_file, _repo_map
 
 
 # ----- read_file offset/limit (sliced reads) -------------------------------
@@ -51,7 +51,7 @@ def test_read_file_refuses_binary(tmp_workspace):
 
 def test_read_file_whole_file_default_line_cap(tmp_workspace):
     """PERF-3: a whole-file read without offset/limit caps lines and notes it."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     p = tmp_workspace / "many.txt"
     p.write_text("".join(f"line{i}\n" for i in range(t._READ_FILE_MAX_LINES + 50)),
@@ -64,7 +64,7 @@ def test_read_file_whole_file_default_line_cap(tmp_workspace):
 
 def test_read_file_refuses_oversized_whole_read(tmp_workspace, monkeypatch):
     """TOOLS-1: a whole-file read refuses files larger than the byte guard."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_READ_FILE_MAX_BYTES", 50)
     (tmp_workspace / "huge.txt").write_text("z" * 200, encoding="utf-8")
@@ -78,7 +78,7 @@ def test_read_file_slice_works_on_oversized_file(tmp_workspace, monkeypatch):
     over the byte guard. The exact line TOTAL is intentionally omitted for an
     oversized file — computing it streams the whole (multi-GB) file, defeating the
     cheap-slice intent — so the header shows the slice range without 'of N'."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_READ_FILE_MAX_BYTES", 50)
     (tmp_workspace / "huge.txt").write_text("".join(f"L{i}\n" for i in range(1, 101)),
@@ -92,7 +92,7 @@ def test_read_file_slice_works_on_oversized_file(tmp_workspace, monkeypatch):
 
 def test_edit_file_refuses_oversized(tmp_workspace, monkeypatch):
     """TOOLS-1: edit_file refuses to load a file larger than the byte guard."""
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_READ_FILE_MAX_BYTES", 50)
     (tmp_workspace / "huge.txt").write_text("a" * 200, encoding="utf-8")
@@ -138,7 +138,7 @@ def test_repo_map_skips_minified_js(tmp_workspace):
 
 
 def test_repo_map_big_file_counts_lines_but_skips_symbols(tmp_workspace, monkeypatch):
-    import llmcli.tools as t
+    import llmcode.tools as t
 
     monkeypatch.setattr(t, "_REPO_MAP_MAX_FILE_BYTES", 10)  # force the big-file path
     big = "\n".join(f"def f{i}():" for i in range(20)) + "\n"

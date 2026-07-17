@@ -12,14 +12,14 @@ import json
 
 import pytest
 
-from llmcli.__main__ import _parse_args, main
-from llmcli.config import Config
-from llmcli.memory import MemoryStore
-from llmcli.providers import MockProvider
-from llmcli.repl import Repl
+from llmcode.__main__ import _parse_args, main
+from llmcode.config import Config
+from llmcode.memory import MemoryStore
+from llmcode.providers import MockProvider
+from llmcode.repl import Repl
 
 # Import the repl module to reference its classes
-import llmcli.repl as r
+import llmcode.repl as r
 
 
 # --------------------------------------------------------------------------- #
@@ -55,13 +55,13 @@ def test_dry_run_with_seed(tmp_workspace, capsys):
 def test_dry_run_without_seed_shows_none(tmp_workspace, monkeypatch, capsys):
     """--dry-run with no --seed shows the DEFAULT seed (None).
 
-    Must be isolated from the user's real ~/.llm-cli/config.json (which may
+    Must be isolated from the user's real ~/.llmcode/config.json (which may
     persist a seed): main() calls load_config() with the bound-default
     CONFIG_PATH pointing at Path.home(), so chdir alone does not isolate it.
     Patch the load_config reference in __main__ to return a fresh default
     Config so this test asserts the default, not whatever the user saved.
     """
-    import llmcli.__main__ as _main
+    import llmcode.__main__ as _main
     monkeypatch.setattr(_main, "load_config", lambda *a, **k: Config())
     result = main(["--dry-run"])
     assert result == 0
