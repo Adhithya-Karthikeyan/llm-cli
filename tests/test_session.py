@@ -451,9 +451,9 @@ def test_fresh_launch_no_session_prints_no_hint(monkeypatch, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "last session" not in out
     assert "↩" not in out
-    # The startup banner replaces the old flat "llmcode ready." line; it still
+    # The startup banner replaces the old flat "llmc-code ready." line; it still
     # shows the app name + a "ready" marker.
-    assert "llmcode" in out and "ready" in out
+    assert "llmc-code" in out and "ready" in out
 
 
 def test_one_shot_run_once_without_session(monkeypatch, tmp_path):
