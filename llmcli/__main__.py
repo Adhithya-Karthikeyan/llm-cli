@@ -1,6 +1,7 @@
 """CLI entry point.
 
-`python -m llmcli` and the `llmc` console script both call :func:`main`.
+`python -m llmcli` and the `llmcli` console script (with `llmc` as a short
+alias) both call :func:`main`.
 
 Flags:
   --provider {local,mock}   backend (default 'local')
@@ -52,7 +53,7 @@ from .tools import set_private
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
-        prog="llmc",
+        prog="llmcli",
         description="A lightweight, personal agentic CLI for LOCAL LLMs (LM Studio).",
     )
     parser.add_argument(

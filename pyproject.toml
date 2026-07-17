@@ -64,6 +64,7 @@ Issues = "https://github.com/Adhithya-Karthikeyan/llm-cli/issues"
 Documentation = "https://github.com/Adhithya-Karthikeyan/llm-cli#readme"
 
 [project.scripts]
+llmcli = "llmcli.__main__:main"
 llmc = "llmcli.__main__:main"
 
 [tool.setuptools]
