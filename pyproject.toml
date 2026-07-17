@@ -58,10 +58,10 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.urls]
-Homepage = "https://github.com/Adhithya-Karthikeyan/llmcode"
-Repository = "https://github.com/Adhithya-Karthikeyan/llmcode"
-Issues = "https://github.com/Adhithya-Karthikeyan/llmcode/issues"
-Documentation = "https://github.com/Adhithya-Karthikeyan/llmcode#readme"
+Homepage = "https://github.com/Adhithya-Karthikeyan/llmc-code"
+Repository = "https://github.com/Adhithya-Karthikeyan/llmc-code"
+Issues = "https://github.com/Adhithya-Karthikeyan/llmc-code/issues"
+Documentation = "https://github.com/Adhithya-Karthikeyan/llmc-code#readme"
 
 [project.scripts]
 llmc-code = "llmcode.__main__:main"

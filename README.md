@@ -1,4 +1,4 @@
-# llmcode
+# llmc-code
 
 A lightweight, personal **Claude Code-style agentic CLI** in pure Python — for
 **LOCAL LLMs only**.
@@ -18,15 +18,21 @@ Providers:
 ## Install
 
 Install it as a **global command** with [pipx](https://pipx.pypa.io) (or `uv tool`).
-This puts the `llmcode` command on your PATH inside an isolated environment, so it
+This puts the `llmc-code` command on your PATH inside an isolated environment, so it
 runs from any directory with no venv to activate:
 
 ```bash
-pipx install git+https://github.com/Adhithya-Karthikeyan/llmcode.git
-# or:  uv tool install git+https://github.com/Adhithya-Karthikeyan/llmcode.git
+pipx install llmc-code
+# or:  uv tool install llmc-code
 ```
 
-Then run `llmcode` anywhere. Upgrade later with `pipx upgrade llmcode`.
+Then run `llmc-code` anywhere. Upgrade later with `pipx upgrade llmc-code`.
+
+To install the latest unreleased build straight from source:
+
+```bash
+pipx install git+https://github.com/Adhithya-Karthikeyan/llmc-code.git
+```
 
 **Requires Python ≥ 3.10.**
 
@@ -38,7 +44,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-This installs the `llmcode` console script. You can also run it as a module with
+This installs the `llmc-code` console script. You can also run it as a module with
 `python -m llmcode`.
 
 ## Usage
@@ -46,17 +52,17 @@ This installs the `llmcode` console script. You can also run it as a module with
 Interactive REPL (uses your saved provider/model, defaults to `local`):
 
 ```bash
-llmcode                       # or: python -m llmcode
-llmcode --provider mock       # offline, scripted demo
-llmcode --provider local --model <your-lm-studio-model-id>
+llmc-code                       # or: python -m llmcode
+llmc-code --provider mock       # offline, scripted demo
+llmc-code --provider local --model <your-lm-studio-model-id>
 ```
 
 One-shot, non-interactive (`--yes` auto-confirms dangerous tools so it runs
 unattended):
 
 ```bash
-llmcode --provider mock --yes -p "create hello.py that prints hi and run it"
-llmcode -p "explain what this repo does"
+llmc-code --provider mock --yes -p "create hello.py that prints hi and run it"
+llmc-code -p "explain what this repo does"
 ```
 
 Flags:
@@ -73,7 +79,7 @@ Flags:
 | `--effort <level>` | Reasoning effort: off\|low\|medium\|high (best-effort) |
 | `--theme <name>` | Color theme: `amber` (**default**, warm polished look) \| `auto` (truecolor) \| `ansi` (Dark mode, ANSI colors only) \| `orange`. Session-only unless `--save` |
 | `--mcp {on,off}` | Enable/disable MCP servers (`~/.llmcode/mcp.json`). `off` starts no servers and sends no MCP tools — smaller prompt, faster tok/s. Session-only unless `--save` |
-| `--context N\|auto\|fixed\|off` | Working-context budget (~tokens). llmcode auto-trims history to it after each turn so decode stays fast; adaptive (flexes per request) by default. Session-only unless `--save` |
+| `--context N\|auto\|fixed\|off` | Working-context budget (~tokens). llmc-code auto-trims history to it after each turn so decode stays fast; adaptive (flexes per request) by default. Session-only unless `--save` |
 | `--private` | **Opt into the offline lockdown** for this session: no external egress (see below). Add `--save` to persist |
 | `--allow-network` | Accepted **no-op alias** for back-compat (network is already the default). Explicitly keeps network on. Add `--save` to persist |
 | `--save` | Persist the given flags as the new default in `~/.llmcode/config.json` |
@@ -90,7 +96,7 @@ Flags:
 /compact              Aggressively summarize ALL history into one tight note,
                       keeping only the last exchange (frees the most context)
 /context [N|auto|fixed|off]
-                      Working-context budget — llmcode auto-trims history to this
+                      Working-context budget — llmc-code auto-trims history to this
                       after each turn so decode stays fast. auto = flex per
                       request (default); fixed = flat N; off = trim only near
                       the model's window. Persisted.
@@ -108,7 +114,7 @@ Ctrl+O                Reveal full detail (args+results) of the last turn
 
 ## Session memory
 
-llmcode remembers the conversation **per project directory** (Claude-Code-style:
+llmc-code remembers the conversation **per project directory** (Claude-Code-style:
 auto-save, opt-in resume), so you can pick up where you left off.
 
 - **Auto-save.** After every completed turn (and on a clean exit) the running
@@ -136,7 +142,7 @@ history first — so an unattended one-shot can build on itself across runs.
 
 ## Networking & safety (default: network enabled)
 
-llmcode runs **network-enabled by default**: `web_fetch` is available, `run_bash`
+llmc-code runs **network-enabled by default**: `web_fetch` is available, `run_bash`
 can reach the network, a non-loopback `base_url` is allowed, all configured MCP
 servers start, and proxy env vars are honored. The startup banner and the REPL
 status line show the active state: `private mode: OFF — network enabled` (or
@@ -204,7 +210,7 @@ above:
 
 ## MCP (Model Context Protocol)
 
-llmcode can connect to local **MCP servers** over the **stdio transport** and
+llmc-code can connect to local **MCP servers** over the **stdio transport** and
 expose their tools to the agent — a stdlib-only, synchronous JSON-RPC 2.0 client
 (no `mcp` SDK, no new dependencies).
 
@@ -309,10 +315,10 @@ The CLI presents like a senior engineer: terse and skimmable.
    gives the best results).
 2. Start its **local server** (Developer tab → Start Server). It exposes an
    OpenAI-compatible API at `http://localhost:1234/v1` by default.
-3. Point llmcode at it:
+3. Point llmc-code at it:
 
    ```bash
-   llmcode --provider local --model <the-model-id> --base-url http://localhost:1234/v1
+   llmc-code --provider local --model <the-model-id> --base-url http://localhost:1234/v1
    ```
 
 The API key is read from `OPENAI_API_KEY` or `LMSTUDIO_API_KEY`, defaulting to the
@@ -335,7 +341,7 @@ parsing a fenced ` ```json ` tool-call block from the model's text output:
 ### Mock (offline)
 
 ```bash
-llmcode --provider mock --yes -p "create hello.py that prints hi and run it"
+llmc-code --provider mock --yes -p "create hello.py that prints hi and run it"
 ```
 
 The mock provider is deterministic and needs no keys or network. Its `hello`
@@ -368,7 +374,7 @@ llmcode/
   orchestration.py  spawn_agent delegation tool + role toolsets
   mcp.py            stdio MCP client + manager (sync JSON-RPC 2.0, stdlib only)
   repl.py           prompt_toolkit input + rich streamed output; provider factory
-  __main__.py       CLI: flags, one-shot -p mode, `llmcode` entry point
+  __main__.py       CLI: flags, one-shot -p mode, `llmc-code` entry point
 tests/              pytest suite (MockProvider only; no network)
 ```
 

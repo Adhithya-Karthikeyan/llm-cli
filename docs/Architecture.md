@@ -1,18 +1,18 @@
-# llmcode — Architecture
+# llmc-code — Architecture
 
-tags: architecture, llmcode, design, modules
+tags: architecture, llmc-code, design, modules
 created: 2026-06-22
 updated: 2026-06-22
 
-## llmcode — Architecture
+## llmc-code — Architecture
 
-Lightweight LOCAL-ONLY agentic CLI (Claude Code-style) in Python. Source at `/Users/adhithya/Projects/apps/llmcode`. Entry point: `llmcode`. 7 source modules, 95 tests, 95 pytest pass.
+Lightweight LOCAL-ONLY agentic CLI (Claude Code-style) in Python. Source at `github.com/Adhithya-Karthikeyan/llmc-code`. Entry point: `llmc-code`. 26 source modules, 1264 tests passing.
 
 ## Project Layout
 
 ```
 llmcode/
-├── pyproject.toml          # setuptools; deps: openai>=2,<3, rich>=13.7.0,<16, prompt_toolkit>=3.0.43,<4; py>3.14; entry: llmcode
+├── pyproject.toml          # setuptools; deps: openai>=2,<3, rich>=13.7.0,<16, prompt_toolkit>=3.0.43,<4; py>=3.10; entry: llmc-code
 ├── requirements.txt        # stale; openai>=1.40.0 no upper bound
 ├── README.md
 ├── llmcode/                 # source package (7 modules)
@@ -180,9 +180,9 @@ llmcode/
 
 ## Run
 
-- `cd <dir> && source .venv/bin/activate && llmcode` (qwen default).
-- One-shot: `llmcode -p "task" --yes`.
+- `cd <dir> && source .venv/bin/activate && llmc-code` (qwen default).
+- One-shot: `llmc-code -p "task" --yes`.
 
 ## Related
   1.00 > Objective (llmcode/Objective.md)
-  0.95 > llmcode — Build Status (llmcode/Status.md)
+  0.95 > llmc-code — Build Status (llmcode/Status.md)
