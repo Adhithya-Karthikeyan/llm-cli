@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llmcode"
+name = "llmc-code"
 dynamic = ["version"]
 description = "A lightweight, personal Claude Code-style agentic CLI for LOCAL LLMs (LM Studio)."
 readme = "README.md"
@@ -64,7 +64,7 @@ Issues = "https://github.com/Adhithya-Karthikeyan/llmcode/issues"
 Documentation = "https://github.com/Adhithya-Karthikeyan/llmcode#readme"
 
 [project.scripts]
-llmcode = "llmcode.__main__:main"
+llmc-code = "llmcode.__main__:main"
 
 [tool.setuptools]
 packages = ["llmcode"]
