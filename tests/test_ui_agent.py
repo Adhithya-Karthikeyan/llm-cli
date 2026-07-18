@@ -145,6 +145,24 @@ def test_suppress_footer_leaves_answer_intact(tmp_workspace):
     assert "tok/s" not in buf.getvalue()
 
 
+def test_footer_separator_falls_back_to_pipe_on_ascii_console(tmp_workspace):
+    """The "Model | Time | Speed" footer's middle-dot separator (" · ") mojibakes
+    to "?" on a non-UTF-8 console (e.g. LANG=C piped output); it must fall back
+    to " | " there, matching the spinner's _SEP/_SEP_ASCII care."""
+    buf = _AsciiIO()
+    console = Console(markup=False, file=buf, force_terminal=False)
+    provider = MockProvider(scenario="hello")
+    provider.model = "mock-model"
+    agent = _agent(console, provider=provider)
+    agent.run("go")
+
+    footer_lines = [ln for ln in buf.getvalue().splitlines() if "tok/s" in ln]
+    assert footer_lines, "expected a printed tok/s footer line"
+    assert all("·" not in ln for ln in footer_lines)
+    assert any("Model: mock-model | Time:" in ln for ln in footer_lines)
+    assert any(" | Speed:" in ln for ln in footer_lines)
+
+
 # ----- change 1: ✓ on success + ASCII fallback ------------------------------
 
 def test_success_check_on_tool_head_when_tty(tmp_workspace):

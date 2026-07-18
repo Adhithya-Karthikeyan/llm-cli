@@ -94,6 +94,32 @@ def _frame(i: int, elapsed: float = 0.0, ascii_mode: bool = False) -> str:
     return f"{glyph} {_LABEL} {sep} {secs}s {sep} {_HINT}"
 
 
+def _sgr(hex_or_none: str | None) -> tuple[str, str]:
+    """Truecolor SGR ``(prefix, reset)`` for a ``#rrggbb`` hex, else ``("", "")``.
+
+    Returns the ANSI 24-bit foreground escape + a full reset so a caller can wrap
+    a substring (the glyph / the timer) in colour. Any NON-hex value — ``None``,
+    ``""``, an ANSI colour NAME ("yellow"), or a malformed string — yields
+    ``("", "")`` so the frame stays uncolored and the spinner draws exactly as
+    before (this is how the ansi theme, whose ``spinner`` is empty, opts out of
+    truecolor). Never raises: a bad hex just falls back to no colour.
+    """
+    if (
+        not hex_or_none
+        or not isinstance(hex_or_none, str)
+        or not hex_or_none.startswith("#")
+        or len(hex_or_none) < 7
+    ):
+        return "", ""
+    try:
+        r = int(hex_or_none[1:3], 16)
+        g = int(hex_or_none[3:5], 16)
+        b = int(hex_or_none[5:7], 16)
+    except ValueError:  # non-hex chars after the "#"
+        return "", ""
+    return f"\x1b[38;2;{r};{g};{b}m", "\x1b[0m"
+
+
 def _stream_supports_unicode(stream) -> bool:
     """True if ``stream`` can encode the braille glyph. Never raises.
 
@@ -119,8 +145,22 @@ class Spinner:
     is idempotent and always erases the spinner's line when enabled.
     """
 
-    def __init__(self, console, enabled: bool | None = None):
+    def __init__(
+        self,
+        console,
+        enabled: bool | None = None,
+        *,
+        color: str | None = None,
+        timer_color: str | None = None,
+    ):
         self.console = console
+        # Optional per-theme colours (truecolor ``#hex``). ``color`` tints ONLY the
+        # braille glyph; ``timer_color`` dims ONLY the "Ns" seconds field. Both are
+        # emitted as raw SGR (this stream bypasses rich) and ONLY on an enabled
+        # (TTY-gated) spinner, so piped/non-tty output stays byte-for-byte clean.
+        # A non-hex/empty value (e.g. the ansi theme) yields no SGR — see ``_sgr``.
+        self.color = color
+        self.timer_color = timer_color
         if enabled is None:
             # Default ON only for a real TTY, and only if the env off-switch is
             # not set. A None/typeless console (no is_terminal) => disabled.
@@ -153,16 +193,47 @@ class Spinner:
             pass
 
     # ----- animation -----------------------------------------------------
+    def _frame_colored(self, i: int, elapsed: float) -> str:
+        """``_frame`` with ONLY the glyph tinted (``self.color``) and ONLY the
+        ``Ns`` timer dimmed (``self.timer_color``) via truecolor SGR.
+
+        The rest of the line (label, separators, interrupt hint) stays the
+        terminal default — the whole line is never colored (keeps it calm). Each
+        coloured span resets immediately, so the frame ends in the default colour
+        BEFORE ``_run`` appends the erase-to-EOL; no colour can bleed past the
+        line. Used only when the spinner is enabled AND ``color`` is a real hex.
+        """
+        frames = _ASCII_FRAMES if self.ascii_mode else _BRAILLE_FRAMES
+        glyph = frames[i % len(frames)]
+        sep = _SEP_ASCII if self.ascii_mode else _SEP
+        secs = max(0, int(elapsed))
+        g_pre, g_reset = _sgr(self.color)
+        t_pre, t_reset = _sgr(self.timer_color)
+        glyph_part = f"{g_pre}{glyph}{g_reset}"
+        timer_part = f"{t_pre}{secs}s{t_reset}"
+        return f"{glyph_part} {_LABEL} {sep} {timer_part} {sep} {_HINT}"
+
     def _run(self) -> None:
         i = 0
+        # Colour the frame only when a real ``#hex`` glyph colour is set. The
+        # thread only runs on an enabled (TTY-gated) spinner, so this SGR can never
+        # reach a piped/non-tty stream.
+        colored = bool(_sgr(self.color)[0])
         while not self._stop_event.is_set():
             elapsed = _now() - self._start_ts
             # Pad to a fixed width so a shorter line can never leave a stale tail
             # behind; the trailing erase-to-EOL is a belt-and-braces cleanup that
             # also clears the extra column when the seconds field gains a digit.
-            self._write(
-                "\r" + _frame(i, elapsed, self.ascii_mode).ljust(self._max_line) + _ERASE_EOL
-            )
+            # Padding is sized on the PLAIN (visible) width so the SGR bytes in the
+            # coloured frame don't skew it; the erase-to-EOL is the real backstop.
+            if colored:
+                plain_len = len(_frame(i, elapsed, self.ascii_mode))
+                pad = " " * max(0, self._max_line - plain_len)
+                self._write("\r" + self._frame_colored(i, elapsed) + pad + _ERASE_EOL)
+            else:
+                self._write(
+                    "\r" + _frame(i, elapsed, self.ascii_mode).ljust(self._max_line) + _ERASE_EOL
+                )
             i += 1
             # Event.wait doubles as the sleep AND a prompt stop signal.
             if self._stop_event.wait(_FPS_SLEEP):

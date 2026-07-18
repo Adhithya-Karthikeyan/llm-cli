@@ -61,12 +61,21 @@ def test_valid_theme_loads(tmp_path):
 
 def test_bad_theme_falls_back_to_default(tmp_path):
     # An unknown / typo'd theme must not be honored; keep the safe "clean" default.
+    # (Use a value that is NOT a real theme — "neon" is now a valid curated theme.)
     p = tmp_path / "config.json"
-    p.write_text('{"theme": "neon"}', encoding="utf-8")
+    p.write_text('{"theme": "neon-pink"}', encoding="utf-8")
     assert load_config(path=p).theme == "clean"
     # Wrong type is also ignored.
     p.write_text('{"theme": 123}', encoding="utf-8")
     assert load_config(path=p).theme == "clean"
+
+
+def test_new_curated_themes_load(tmp_path):
+    # The new curated theme keys + descriptive aliases are all accepted.
+    p = tmp_path / "config.json"
+    for name in ("neon", "blossom", "frost", "midnight", "ember"):
+        p.write_text('{"theme": "%s"}' % name, encoding="utf-8")
+        assert load_config(path=p).theme == name
 
 
 def test_theme_round_trips_through_save(tmp_path):

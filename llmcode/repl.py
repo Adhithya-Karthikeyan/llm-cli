@@ -3,7 +3,7 @@
 - prompt_toolkit for line input (history, editing).
 - rich Console for output; streamed assistant text renders live.
 - Slash commands: /model /models /provider /effort /maxout /compact /clear
-  /resume /forget /help /exit (see HELP_TEXT — the single canonical command list).
+  /resume /forget /help /exit (see _HELP_SECTIONS — the canonical command list).
 - Ctrl+O reveals the orchestrator's last-turn detail.
 - Shows the active provider/model.
 - Per-project session memory: the conversation auto-saves after every turn and
@@ -27,7 +27,7 @@ import time
 import uuid
 
 from .agent import _TURN_READ_NUDGE_BYTES, Agent, confirm_label
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from . import checkpoint
 from . import cooldown
@@ -51,7 +51,12 @@ from .config import (
     THEME_AMBER,
     THEME_ANSI,
     THEME_AUTO,
+    THEME_BLOSSOM,
     THEME_CLEAN,
+    THEME_EMBER,
+    THEME_FROST,
+    THEME_MIDNIGHT,
+    THEME_NEON,
     THEME_ORANGE,
     THEMES,
     Config,
@@ -93,80 +98,75 @@ _KNOWN_COMMANDS = frozenset({
     "/branch", "/fork", "/doctor", "/commands",
 })
 
-HELP_TEXT = """\
-Commands:
-  /help                 Show this help
-  /provider <name>      Switch provider: local | mock
-  /models               List models available on the server
-  /model <name>         Set the model (verified against the server's list)
-  /effort <level>       Reasoning effort: off | low | medium | high (best-effort;
-                        ignored by models that don't support reasoning_effort)
-  /maxout <N> | off     Per-request generation cap (max_tokens); off | 0 | -1 =
-                        unbounded (default). A low cap counts reasoning tokens.
-  /temp [value]         Sampling temperature 0.0-2.0 (default 0.2; lower = more
-                        deterministic, fewer malformed tool calls). No arg: show.
-  /verify [cmd|off]     Auto-run <cmd> after a turn edits files but runs nothing
-                        (output fed back to fix failures). No arg: show; off: disable.
-  /gentle [on|off|tokens <n>|gap <s>|sgap <s>]
-                        Gentle mode (default ON): lower average GPU load/heat by
-                        capping output tokens (shorter bursts) + a cool-down
-                        between turns. sgap spaces out sequential sub-agent
-                        spawns. Does NOT cap GPU %. No arg: show status.
-  /cooldown [on|off|interval <s>|duration <s>]
-                        Thermal cooldown (default ON): pause generation for a
-                        short break every N seconds of continuous work — even
-                        mid-turn — to let the GPU cool. No arg: show status.
-  /image [path [msg]]   Attach an image to your NEXT message (vision models only).
-                        Stage multiple by repeating; add a msg to send at once.
-                        No arg: list staged; /image clear: drop all staged.
-  /theme <name>         Color theme: clean (default, minimal dark, low-key grey)
-                        | amber (warm polished look) | auto (truecolor) | ansi
-                        (Dark mode, ANSI colors only — uses your terminal's own
-                        16-color palette) | orange (orange-on-black inline code)
-  /compact              Aggressively summarize ALL history into one tight note,
-                        keeping only the last exchange (frees the most context)
-  /context [N|auto|fixed|off]
-                        Working-context budget (auto-trims after each turn so
-                        decode stays fast). auto = flex per request (default);
-                        fixed = flat N; off = only trim near the model's window
-  /audit [path]         Map-reduce audit: review the repo in small isolated
-                        chunks (fast; keeps context small) → merged report.
-                        Does not touch your conversation. Default path: '.'
-  /speed                Tips to raise tok/s (LM Studio settings + how context
-                        size affects speed)
-  /codeembed [on|off]   Toggle semantic code_search. off (default) = BM25-only
-                        (fast, no embedding-model GPU swap); on = semantic (may
-                        swap the embed model on a single-GPU/local server)
-  /mcp [on|off]         No arg: list MCP servers + status. on/off: enable or
-                        disable MCP (off stops the servers + drops their tools,
-                        shrinking each prompt → faster). Persisted.
-  /undo                 Revert the last file write/edit this session made
-                        (restores the file-snapshot checkpoint; session-scoped)
-  /diff [path]          Show the working-tree git diff (optionally for one PATH)
-  /commit [msg]         Commit all changes; auto-writes a message from the diff
-                        when none is given
-  /init                 Write a starter AGENTS.md project-rules file
-  /copy [N]             Copy the last (or Nth-from-last) assistant answer to the
-                        clipboard
-  /mode [name]          Show or set the permission mode (default | acceptEdits |
-                        plan | …); no arg: show current
-  /branch [tag]         Save (no arg: list) a named snapshot of this conversation
-  /fork <tag>           Load a saved branch snapshot and continue from it
-  /doctor               Run environment/health checks (provider, git, sandbox, …)
-  /commands             List project macros in .llmcode/commands/*.md
-  /clear                Clear the conversation history
-  /resume               Reload this project's saved session (local-only memory)
-  /forget               Delete this project's saved session
-  /exit, /quit          Leave
-  Ctrl+O                Reveal the orchestrator's last-turn detail (args+results)
-Anything else is sent to the agent.
+# Grouped command reference for /help — the single canonical command list. Each
+# section is (title, [(command, one-line description), …]). ``Repl._print_help``
+# renders it with an accent /command column + muted descriptions on the themed
+# console (byte-clean when piped). The longer NETWORK/SSRF prose lives in
+# _HELP_NETWORK (shown by `/help network`). Keep in sync with _KNOWN_COMMANDS /
+# _dispatch_slash.
+_HELP_SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
+    ("Core", [
+        ("/help [network]", "Show this help (network = the network & sandbox notes)"),
+        ("/clear", "Clear the conversation history"),
+        ("/resume", "Reload this project's saved session (local-only memory)"),
+        ("/forget", "Delete this project's saved session"),
+        ("/exit, /quit", "Leave"),
+        ("Ctrl+O", "Reveal the orchestrator's last-turn detail (args + results)"),
+    ]),
+    ("Model", [
+        ("/provider <name>", "Switch provider: local | mock"),
+        ("/models", "List models available on the server"),
+        ("/model <name>", "Set the model (verified against the server's list)"),
+        ("/effort <level>", "Reasoning effort: off | low | medium | high (best-effort)"),
+        ("/maxout <N|off>", "Per-request generation cap; off | 0 | -1 = unbounded"),
+        ("/temp [value]", "Sampling temperature 0.0-2.0 (default 0.2; lower = steadier)"),
+    ]),
+    ("Context", [
+        ("/compact", "Summarize ALL history into one note, keep the last exchange"),
+        ("/context [N|auto|fixed|off]", "Working-context budget (auto-trims each turn)"),
+        ("/audit [path]", "Map-reduce repo review in small isolated chunks"),
+        ("/speed", "Tips to raise tok/s (LM Studio settings + context size)"),
+        ("/codeembed [on|off]", "Toggle semantic code_search (off = BM25-only, fast)"),
+        ("/mcp [on|off]", "List, enable, or disable MCP servers + their tools"),
+    ]),
+    ("Git & files", [
+        ("/undo", "Revert the last file write/edit this session made"),
+        ("/diff [path]", "Show the working-tree git diff (optionally one PATH)"),
+        ("/commit [msg]", "Commit all changes (auto-writes a message if none given)"),
+        ("/init", "Write a starter AGENTS.md project-rules file"),
+        ("/copy [N]", "Copy the last (or Nth-from-last) answer to the clipboard"),
+        ("/mode [name]", "Show or set the permission mode (default|acceptEdits|plan|…)"),
+        ("/branch [tag]", "Save (no arg: list) a named conversation snapshot"),
+        ("/fork <tag>", "Load a saved branch snapshot and continue from it"),
+        ("/doctor", "Run environment/health checks (provider, git, sandbox, …)"),
+        ("/commands", "List project macros in .llmcode/commands/*.md"),
+    ]),
+    ("Tuning", [
+        ("/verify [cmd|off]", "Auto-run <cmd> after a turn edits files (fed back to fix)"),
+        ("/gentle [on|off|…]", "Gentle mode (default ON): lower average GPU load/heat"),
+        ("/cooldown [on|off|…]", "Thermal cooldown (default ON): periodic cooling breaks"),
+        ("/image [path [msg]]", "Attach an image to your NEXT message (vision models)"),
+    ]),
+    ("Themes", [
+        ("/theme <name>",
+         "clean/midnight · amber/ember · orange · auto/frost · neon · blossom · ansi"),
+    ]),
+]
+
+# Footer under the sections in the default /help. Keeps the shell-safety note
+# (!<cmd> is NOT sandboxed) + the unknown-slash routing rule visible by default;
+# the longer NETWORK/SSRF prose moves behind `/help network`.
+_HELP_FOOTER = """\
 !<cmd> runs <cmd> in YOUR shell directly — it is NOT sandboxed, even in
 --private mode (it's your own shell, not a gated agent tool). Review before use.
-Lines starting with an unknown /command are sent to the model (so you can work on
-projects that use their own / commands, e.g. /build or /deploy).
-Start a line with // to send a literal leading slash to the model (e.g.
-"//model …" chats ABOUT the command instead of running llmcode's /model).
+Lines starting with an unknown /command are sent to the model; start a line with
+// to send a literal leading slash (e.g. "//model …"). Anything else is sent to
+the agent.
+Run /help network for the network & sandbox security details."""
 
+# Detailed network + sandbox security notes, surfaced on demand via `/help
+# network` so the default command list stays scannable.
+_HELP_NETWORK = """\
 NETWORK (default): network enabled; web_fetch is SSRF-safe (blocks
 internal/metadata, validates redirects, http/https only) and confirmation-gated;
 run_bash is confirmation-gated and has FULL filesystem + network access — the
@@ -181,18 +181,17 @@ run_bash with a macOS no-network profile (sandbox-exec, FAIL CLOSED if missing);
 starts ONLY MCP servers marked "private_ok": true in mcp.json; and ignores proxy
 env (trust_env=False).
 
-Tool activity collapses to one dim line after each turn:
+Tool activity collapses to one line after each turn:
   ⏺ N tools · Ctrl+O to expand
 Ctrl+O reveals the full ⏺/⎿ tree — one two-line entry per call:
   ⏺ Read(README.md)
     ⎿  Read 120 lines
-The "⏺" glyph is green, the result summary line is dim. A failed call shows a
-dim-red "✗ <short reason>" (declined -> "✗ declined"; unknown -> "✗ unknown tool").
+The "⏺" head is accent-coloured, the result summary line is muted. A failed call
+shows a "✗ <short reason>" (declined -> "✗ declined"; unknown -> "✗ unknown tool").
 Ctrl+O is line-based: it cannot interrupt a running turn — press it at the next
 prompt to reveal the turn that just finished. NOTE: it reveals only the
 ORCHESTRATOR's own tool calls; a delegated sub-agent's activity shows as a
-prefixed "↳ ⏺ N tools" line during the run and is not in this buffer.
-"""
+prefixed "↳ ⏺ N tools" line during the run and is not in this buffer."""
 
 
 SPEED_TIPS = """\
@@ -298,14 +297,24 @@ def _apply_edit_for_preview(text: str, old: str, new: str) -> str | None:
         return None
 
 
-def _diff_preview_lines(tool_name: str, args: dict) -> list[tuple[str, str]] | None:
+def _diff_preview_lines(
+    tool_name: str, args: dict, palette=None
+) -> list[tuple[str, str]] | None:
     """Build a concise (line, rich-style) preview for a write_file/edit_file call.
 
-    Returns a list of ``(text, style)`` rows (style is "green"/"red"/"dim") ready
-    to print before the y/N prompt, or None when there is nothing safe to show
-    (unknown tool, bad args, binary/missing/oversized file, or an edit whose
-    target isn't uniquely locatable). Capped to ~60 lines. Never raises.
+    Returns a list of ``(text, style)`` rows ready to print before the y/N prompt,
+    or None when there is nothing safe to show (unknown tool, bad args, binary/
+    missing/oversized file, or an edit whose target isn't uniquely locatable).
+    Capped to ~60 lines. Never raises.
+
+    Styles are the theme's SEMANTIC tokens when a ``palette`` is passed — ``+``
+    lines in ``success``, ``-`` lines in ``error``, context/``@@`` in ``muted`` —
+    else the historic "green"/"red"/"dim" literals so the ANSI theme (and any
+    palette-less caller) is byte-for-byte unchanged.
     """
+    add_style = palette.success if palette else "green"
+    del_style = palette.error if palette else "red"
+    ctx_style = palette.dim if palette else "dim"
     try:
         if not isinstance(args, dict):
             return None
@@ -322,7 +331,7 @@ def _diff_preview_lines(tool_name: str, args: dict) -> list[tuple[str, str]] | N
                 # instead of a full diff so the prompt still previews the action.
                 if not os.path.exists(os.path.expanduser(path)):
                     n = len(content.splitlines())
-                    return [(f"＋ new file: {path} ({n} lines)", "green")]
+                    return [(f"＋ new file: {path} ({n} lines)", add_style)]
                 return None
             proposed = content
         elif tool_name == "edit_file":
@@ -349,20 +358,47 @@ def _diff_preview_lines(tool_name: str, args: dict) -> list[tuple[str, str]] | N
         rows: list[tuple[str, str]] = []
         for line in diff:
             if line.startswith("+"):
-                style = "green"
+                style = add_style
             elif line.startswith("-"):
-                style = "red"
+                style = del_style
             else:
-                style = "dim"
+                style = ctx_style
             rows.append((line, style))
         if not rows:
             return None
         if len(rows) > _DIFF_PREVIEW_MAX_LINES:
             rows = rows[:_DIFF_PREVIEW_MAX_LINES]
-            rows.append(("…(truncated)", "dim"))
+            rows.append(("…(truncated)", ctx_style))
         return rows
     except Exception:  # noqa: BLE001 - preview is best-effort; never raise
         return None
+
+
+def _enc_can(obj, s: str) -> bool:
+    """True when ``obj``'s output encoding can represent ``s`` (glyph guard).
+
+    Mirrors ``Agent._console_can_encode``: guards the ⚠/⏺ glyphs against mojibake
+    on a legacy-encoded terminal or ASCII pipe (LANG=C). ``obj`` is anything with
+    an ``encoding`` attribute (a rich Console or ``sys.stdout``); a UTF-8 stream —
+    which every test's capsys/StringIO is — always returns True, leaving the
+    piped-test output byte-for-byte unchanged while still ASCII-degrading where a
+    glyph truly can't render."""
+    enc = getattr(obj, "encoding", None) or "utf-8"
+    try:
+        s.encode(enc)
+        return True
+    except (LookupError, UnicodeEncodeError, AttributeError):
+        return False
+
+
+def _box_for(name: str):
+    """Map a ThemeSpec ``box_style`` string to the matching ``rich.box.*`` const.
+
+    Accepts "ROUNDED"/"HEAVY"/"DOUBLE"/"MINIMAL"/"SQUARE"/"ASCII" (case-insensitive);
+    an unknown/empty value falls back to ROUNDED (the historic banner frame)."""
+    from rich import box
+
+    return getattr(box, (name or "ROUNDED").upper(), box.ROUNDED)
 
 
 def make_ptk_confirm(session, config=None):
@@ -380,28 +416,38 @@ def make_ptk_confirm(session, config=None):
     """
 
     def _confirm(tool, args) -> bool:
-        # Optional diff preview for write/edit (finding: diff_preview). Rendered to
-        # stdout via a rich Console so it is captured in tests and themed
-        # dim/green/red. Best-effort: any failure just skips the diff and prompts.
+        # Resolve the active theme once: it colours BOTH the diff preview and the
+        # y/N prompt line (warning ⚠ glyph + accent action label).
+        theme = getattr(config, "theme", THEME_CLEAN) if config is not None else THEME_CLEAN
+        pal = palette_for(theme)
+        # Use the SAME collapsed summary + byte-hint logic as the loop and the
+        # input()-based fallback, centralized in agent.confirm_label (finding #29)
+        # — no duplicated label-building here. Full args stay for Ctrl+O reveal.
+        label, hint = confirm_label(tool, args)
+        # Optional diff preview for write/edit (finding: diff_preview). Rendered on
+        # the THEMED console so + / - / context lines carry the theme's semantic
+        # success/error/muted tokens (byte-clean when piped — a non-tty console
+        # emits no ANSI). Best-effort: any failure just skips the diff and prompts.
         if (
             config is not None
             and getattr(config, "diff_preview", False)
             and getattr(tool, "name", "") in ("write_file", "edit_file")
         ):
-            rows = _diff_preview_lines(getattr(tool, "name", ""), args)
+            rows = _diff_preview_lines(getattr(tool, "name", ""), args, pal)
             if rows:
                 try:
-                    from rich.console import Console
-
-                    con = Console(markup=False, highlight=False)
+                    con = _make_console(theme)
+                    # Themed header ABOVE the diff — "⏺ edit_file <path>" in the
+                    # accent colour — so the diff visually belongs to the pending
+                    # action. The glyph ASCII-degrades on a non-UTF-8 console and
+                    # the line stays byte-clean when piped (non-tty console → no
+                    # ANSI). ``label`` is already "<tool> <path>".
+                    glyph = "⏺ " if _enc_can(con, "⏺") else "* "
+                    con.print(glyph + label, style=pal.accent)
                     for text, style in rows:
                         con.print(text, style=style)
                 except Exception:  # noqa: BLE001 - never block the prompt on render
                     pass
-        # Use the SAME collapsed summary + byte-hint logic as the loop and the
-        # input()-based fallback, centralized in agent.confirm_label (finding #29)
-        # — no duplicated label-building here. Full args stay for Ctrl+O reveal.
-        label, hint = confirm_label(tool, args)
         # This confirm reuses the interactive PromptSession, which carries a ghost
         # `placeholder` ("Ask anything · …") for the MAIN input. Left as-is it
         # renders glued onto the y/N line. A per-call `placeholder=None` is a NO-OP
@@ -411,16 +457,29 @@ def make_ptk_confirm(session, config=None):
         # input would silently lose its ghost after the first confirm. patch_stdout
         # (raw=True) coordinates any background stdout write landing during the y/N
         # so it can't leave residue on that row (same fix as the main-input read).
+        from prompt_toolkit.formatted_text import FormattedText
         from prompt_toolkit.patch_stdout import patch_stdout
 
+        # Highest-stakes moment: lead with a warning-coloured ⚠ glyph, colour the
+        # action label (the "<tool> <path>" the y/N applies to) in the theme accent,
+        # and keep the "[y/N]" in the default fg. Inline prompt_toolkit style
+        # fragments (bare hex/colour = fg) so this renders through ptk on a real
+        # terminal; the ⚠ glyph ASCII-degrades on a non-UTF-8 console. The prompt is
+        # interactive-only (ptk owns the terminal) so it never reaches piped output.
+        warn_glyph = "⚠ " if _enc_can(sys.stdout, "⚠") else "! "
+        message = FormattedText([
+            ("", "\n"),
+            (pal.warning, warn_glyph),
+            ("", "Run "),
+            (pal.ptk, label),
+            ("", f"?{hint} [y/N] "),
+        ])
         saved_placeholder = getattr(session, "placeholder", None)
         try:
             # Leading newline so the y/N prompt isn't glued to the preceding dim
             # tok/s footer when the model narrates AND calls a gated tool.
             with patch_stdout(raw=True):
-                answer = session.prompt(
-                    f"\nRun {label}?{hint} [y/N] ", placeholder=""
-                )
+                answer = session.prompt(message, placeholder="")
         except (EOFError, KeyboardInterrupt):
             return False
         finally:
@@ -699,130 +758,64 @@ def _build_input_completer(repl):
     return _InputCompleter()
 
 
-# Orange theme palette (truecolor hex; downsamples to 256 on lesser terminals).
-_ORANGE = "#ff9e3d"
-_ORANGE_BRIGHT = "#ffb454"
-_ORANGE_DIM = "#c9763d"
+# Per-theme hex is inlined directly into each ThemeSpec in _SPECS below (one
+# palette per curated theme, matching the design-spec tables byte-for-byte), so
+# there are no shared per-theme colour constants to drift out of sync.
 
 
-def _orange_theme():
-    """rich Theme overriding the markdown.* styles for the orange theme.
+@dataclass(frozen=True)
+class ThemeSpec:
+    """Single source of truth for ONE theme's look. Both rendering engines —
+    the markdown rich ``Theme`` (``to_rich_theme``) and the chrome ``Palette``
+    (``to_palette``) — derive from this, so a theme is described in one place.
 
-    Inline code (markdown.code) becomes orange TEXT with NO bgcolor, removing
-    rich's default grey/black background box. Only accents + inline code are
-    recolored; paragraph/body text is left to the terminal default so prose
-    stays readable light-on-black. NO style here sets a bgcolor (no boxes).
+    Every field is a rich style string unless suffixed ``_ptk`` (prompt_toolkit
+    vocabulary). Truecolor hex is primary; rich/ptk auto-downsample except the
+    ``ansi`` theme, which uses only the 16 ANSI names. Fields not yet consumed
+    by a rendering path carry safe defaults so partial specs never crash.
     """
-    from rich.style import Style
-    from rich.theme import Theme
 
-    return Theme({
-        "markdown.code": Style(color=_ORANGE, bold=True),
-        "markdown.code_block": Style(color=_ORANGE),
-        "markdown.h1": Style(color=_ORANGE_BRIGHT, bold=True),
-        # h2+ step down to plain orange so the heading hierarchy is distinct.
-        "markdown.h2": Style(color=_ORANGE, bold=True),
-        "markdown.h3": Style(color=_ORANGE, bold=True),
-        "markdown.h4": Style(color=_ORANGE, bold=True),
-        "markdown.h5": Style(color=_ORANGE),
-        "markdown.h6": Style(color=_ORANGE),
-        "markdown.strong": Style(color=_ORANGE, bold=True),
-        "markdown.item.bullet": Style(color=_ORANGE, bold=True),
-        "markdown.item.number": Style(color=_ORANGE, bold=True),
-        "markdown.link": Style(color=_ORANGE_BRIGHT, underline=True),
-        "markdown.link_url": Style(color=_ORANGE_DIM),
-        "markdown.block_quote": Style(color=_ORANGE_DIM),
-        "markdown.hr": Style(color=_ORANGE_DIM),
-    })
+    # ---- identity -----------------------------------------------------
+    name: str
 
+    # ---- accents / neutrals consumed by the chrome Palette ------------
+    accent: str                  # answer-box border, prompt, footer values
+    accent_bright: str           # brightest accent tier (h1, strong, Palette.bright)
+    muted: str                   # secondary/metadata grey (Palette.dim)
+    success: str                 # ✓ marks, ready dot, +diff, doctor pass
+    accent_ptk: str              # prompt glyph + status-bar numbers (Palette.ptk)
 
-# Amber theme palette (the default). Warm orange accents + a GOLD bold so
-# **important words** pop, headers in bright amber, inline code in orange with
-# NO background box. Truecolor hex downsamples to 256/16 on lesser terminals.
-_AMBER = "#ff9e3d"          # primary accent (gutter, prompt, bullets, code)
-_AMBER_GOLD = "#ffcf6b"     # bright gold — bold words + h1/h2 headers
-_AMBER_DIM = "#c9763d"      # muted amber — links/urls/quotes/rules
+    # ---- prose (markdown.*) ------------------------------------------
+    faint: str                   # markdown hr / block_quote / link_url
+    inline_code: str             # markdown.code / .code_block (TEXT, no bg box)
+    bold_word: str               # markdown.strong
+    bullet: str                  # markdown.item.bullet
+    heading: str                 # markdown.h2..h6 base
+    link: str                    # markdown.link
+    accent_secondary: str        # markdown.item.number
 
+    # ---- pygments code fence -----------------------------------------
+    code_theme: str
 
-def _amber_theme():
-    """rich Theme for the polished default "amber" look.
-
-    Builds on the orange theme: inline code is orange TEXT with NO bgcolor box,
-    headers are bright amber, **bold** text reads in GOLD so important words pop,
-    bullets/numbers are amber. Body prose stays the terminal default (readable
-    light-on-black). No style sets a bgcolor (no boxes anywhere).
-    """
-    from rich.style import Style
-    from rich.theme import Theme
-
-    return Theme({
-        "markdown.code": Style(color=_AMBER, bold=True),
-        "markdown.code_block": Style(color=_AMBER),
-        # h1 is the single brightest GOLD heading; h2+ step down to amber so the
-        # heading hierarchy is visually distinct (not a flat wall of gold).
-        "markdown.h1": Style(color=_AMBER_GOLD, bold=True),
-        "markdown.h2": Style(color=_AMBER, bold=True),
-        "markdown.h3": Style(color=_AMBER, bold=True),
-        "markdown.h4": Style(color=_AMBER, bold=True),
-        "markdown.h5": Style(color=_AMBER),
-        "markdown.h6": Style(color=_AMBER),
-        # GOLD bold so **important words** are the brightest thing in the answer.
-        "markdown.strong": Style(color=_AMBER_GOLD, bold=True),
-        "markdown.em": Style(color=_AMBER, italic=True),
-        "markdown.item.bullet": Style(color=_AMBER, bold=True),
-        "markdown.item.number": Style(color=_AMBER, bold=True),
-        "markdown.link": Style(color=_AMBER_GOLD, underline=True),
-        "markdown.link_url": Style(color=_AMBER_DIM),
-        "markdown.block_quote": Style(color=_AMBER_DIM),
-        "markdown.hr": Style(color=_AMBER_DIM),
-    })
-
-
-# Clean theme palette (the DEFAULT). A minimal DARK look: near-monochrome grey
-# scale with ONE soft accent. Borders/prompt are a LOW-KEY dim grey (never loud),
-# emphasis (**bold**) reads in near-white so important words pop, links keep a
-# single restrained blue. Nothing sets a background box. Truecolor hex
-# downsamples to 256/16 on lesser terminals.
-_CLEAN = "#8b949e"          # soft grey accent — answer box border, prompt, rate
-_CLEAN_BRIGHT = "#e6edf3"   # near-white — h1 + emphasis so key words pop
-_CLEAN_DIM = "#484f58"      # very dim grey — links/urls/quotes/rules
-_CLEAN_TEXT = "#c9d1d9"     # light grey — headers/inline code (calm, readable)
-_CLEAN_LINK = "#79c0ff"     # one restrained blue — links only
-
-
-def _clean_theme():
-    """rich Theme for the minimal dark "clean" look.
-
-    Near-monochrome: headers + inline code in a calm light grey, **bold** in
-    near-white so important words are the brightest thing, bullets/numbers in the
-    soft grey accent, links a single restrained blue. NO style sets a bgcolor
-    (no boxes anywhere) — the only frame is the thin answer box from the shared
-    layout, drawn in the dim grey accent.
-    """
-    from rich.style import Style
-    from rich.theme import Theme
-
-    return Theme({
-        "markdown.code": Style(color=_CLEAN_TEXT),
-        "markdown.code_block": Style(color=_CLEAN_TEXT),
-        # h1 is the single brightest near-white heading; h2+ step down to the
-        # calm light grey so the hierarchy reads without shouting.
-        "markdown.h1": Style(color=_CLEAN_BRIGHT, bold=True),
-        "markdown.h2": Style(color=_CLEAN_TEXT, bold=True),
-        "markdown.h3": Style(color=_CLEAN_TEXT, bold=True),
-        "markdown.h4": Style(color=_CLEAN_TEXT, bold=True),
-        "markdown.h5": Style(color=_CLEAN_TEXT),
-        "markdown.h6": Style(color=_CLEAN_TEXT),
-        # Near-white bold so **important words** are the brightest thing.
-        "markdown.strong": Style(color=_CLEAN_BRIGHT, bold=True),
-        "markdown.em": Style(color=_CLEAN_TEXT, italic=True),
-        "markdown.item.bullet": Style(color=_CLEAN, bold=True),
-        "markdown.item.number": Style(color=_CLEAN, bold=True),
-        "markdown.link": Style(color=_CLEAN_LINK, underline=True),
-        "markdown.link_url": Style(color=_CLEAN_DIM),
-        "markdown.block_quote": Style(color=_CLEAN_DIM),
-        "markdown.hr": Style(color=_CLEAN_DIM),
-    })
+    # ---- optional / not-yet-wired (safe defaults; inert until later) --
+    fg: str = ""                 # primary body foreground (Console default today)
+    error: str = "red"           # ✗ marks, -diff, _err, doctor fail
+    warning: str = "yellow"      # confirm ⚠, caution status
+    em: str | None = None        # markdown.em override (None = rich default italic)
+    inline_code_bg: str | None = None   # optional bg box for inline code
+    inline_code_bold: bool = True       # whether markdown.code is bold
+    box_style: str = "ROUNDED"   # answer box + banner frame shape
+    border: str = ""             # answer box + banner border color
+    banner_glyph: str = "◆"
+    ready_glyph: str = "●"
+    prompt_glyph: str = "❯"
+    spinner_glyph_set: str = "braille"
+    spinner: str = ""            # braille spinner glyph color (hex)
+    spinner_timer: str = ""      # "· 3s ·" timer segment color (hex)
+    gutter: str = "▌"            # box-border / status accent glyph
+    muted_ptk: str = ""          # status-bar base text + placeholder
+    status_num_ptk: str = ""     # status-bar digit runs
+    completion_ptk: str = ""     # completion-menu selected item
 
 
 class Palette:
@@ -835,7 +828,10 @@ class Palette:
     vocabularies for the basic-ANSI theme).
     """
 
-    def __init__(self, accent, bright, dim, success, ptk, gutter="▌", prompt="❯"):
+    def __init__(self, accent, bright, dim, success, ptk, gutter="▌", prompt="❯",
+                 *, error="red", warning="yellow", muted_ptk="", status_num_ptk="",
+                 border="", box_style="ROUNDED", spinner="", spinner_timer="",
+                 banner_glyph="◆", ready_glyph="●", completion_ptk=""):
         self.accent = accent
         self.bright = bright
         self.dim = dim
@@ -843,70 +839,278 @@ class Palette:
         self.ptk = ptk
         self.gutter = gutter
         self.prompt = prompt
+        # Extended tokens (defaulted, keyword-only): carried for later steps so
+        # every existing positional Palette(...) construction still works as-is.
+        self.error = error
+        self.warning = warning
+        self.muted_ptk = muted_ptk
+        self.status_num_ptk = status_num_ptk
+        self.border = border
+        self.box_style = box_style
+        self.spinner = spinner
+        self.spinner_timer = spinner_timer
+        self.banner_glyph = banner_glyph
+        self.ready_glyph = ready_glyph
+        self.completion_ptk = completion_ptk
 
 
-# clean is the default minimal-dark grey; amber/orange share the warm palette;
-# auto is cool cyan; ansi stays inside the 16 basic ANSI colours (rich names +
-# prompt_toolkit "ansi*" spellings) and uses a thin "│" gutter so it needs no
-# truecolor. The "gutter" field is the box-border + status accent (the old left
-# bar is gone; the shared layout now draws a thin box around the answer).
-_PALETTES = {
-    THEME_CLEAN: Palette(_CLEAN, _CLEAN_BRIGHT, _CLEAN_DIM, "#3fb950", "#8b949e"),
-    THEME_AMBER: Palette(_AMBER, _AMBER_GOLD, _AMBER_DIM, "#7fd17f", "#ff9e3d bold"),
-    THEME_ORANGE: Palette(_ORANGE, _ORANGE_BRIGHT, _ORANGE_DIM, "#7fd17f", "#ff9e3d bold"),
-    THEME_AUTO: Palette("#5fd7ff", "#aef0ff", "#5f8aa0", "#7fd17f", "#5fd7ff bold"),
-    THEME_ANSI: Palette(
-        "yellow", "bright_yellow", "bright_black", "green",
-        "ansiyellow bold", gutter="│",
+def to_rich_theme(spec: ThemeSpec) -> "Theme":
+    """Build the markdown.* rich ``Theme`` from a ``ThemeSpec``.
+
+    Only markdown.* keys are overridden (as today); rich merges the rest with its
+    defaults. Inline code is TEXT with no bg box unless ``inline_code_bg`` is set,
+    and ``markdown.em`` is only overridden when ``spec.em`` is set (matching the
+    orange theme, which historically kept rich's default italic em).
+    """
+    from rich.style import Style
+    from rich.theme import Theme
+
+    if spec.inline_code_bold:
+        code_style = Style(color=spec.inline_code, bgcolor=spec.inline_code_bg,
+                           bold=True)
+    else:
+        code_style = Style(color=spec.inline_code, bgcolor=spec.inline_code_bg)
+    d = {
+        "markdown.code": code_style,
+        "markdown.code_block": Style(color=spec.inline_code),
+        "markdown.h1": Style(color=spec.accent_bright, bold=True),
+        # h2+ step down to the heading tier so the hierarchy stays distinct.
+        "markdown.h2": Style(color=spec.heading, bold=True),
+        "markdown.h3": Style(color=spec.heading, bold=True),
+        "markdown.h4": Style(color=spec.heading, bold=True),
+        "markdown.h5": Style(color=spec.heading),
+        "markdown.h6": Style(color=spec.heading),
+        "markdown.strong": Style(color=spec.bold_word, bold=True),
+        "markdown.item.bullet": Style(color=spec.bullet, bold=True),
+        "markdown.item.number": Style(color=spec.accent_secondary, bold=True),
+        "markdown.link": Style(color=spec.link, underline=True),
+        # rich applies markdown.link_url to the VISIBLE anchor text when hyperlinks
+        # are on (the default), so keep it in the themed link color + underlined
+        # rather than faint — otherwise link text reads as dim body copy.
+        "markdown.link_url": Style(color=spec.link, underline=True),
+        "markdown.block_quote": Style(color=spec.faint),
+        "markdown.hr": Style(color=spec.faint),
+    }
+    if spec.em is not None:
+        d["markdown.em"] = Style(color=spec.em, italic=True)
+    return Theme(d)
+
+
+def to_palette(spec: ThemeSpec) -> Palette:
+    """Chrome ``Palette`` (unchanged public surface) derived from a ``ThemeSpec``.
+
+    The seven fields existing callers read (accent/bright/dim/success/ptk/gutter/
+    prompt) map to the spec's accent tier; the extended tokens ride along as
+    keyword-only attributes for later steps.
+    """
+    return Palette(
+        spec.accent, spec.accent_bright, spec.muted, spec.success, spec.accent_ptk,
+        gutter=spec.gutter, prompt=spec.prompt_glyph,
+        error=spec.error, warning=spec.warning,
+        muted_ptk=spec.muted_ptk, status_num_ptk=spec.status_num_ptk,
+        border=spec.border, box_style=spec.box_style,
+        spinner=spec.spinner, spinner_timer=spec.spinner_timer,
+        banner_glyph=spec.banner_glyph, ready_glyph=spec.ready_glyph,
+        completion_ptk=spec.completion_ptk,
+    )
+
+
+# One ThemeSpec per theme key, each a curated, structurally-distinct dark
+# palette (different accent hue, box shape, spinner colour, and code fence). Hex
+# is inlined verbatim from the design-spec tables. Legacy keys keep resolving but
+# now carry a curated look:
+#   clean  -> Midnight (Tokyo Night)   amber/orange -> Ember (Gruvbox)
+#   auto   -> Frost (Nord)             ansi -> unchanged 16-colour ANSI
+# and neon (Dracula) + blossom (Catppuccin) are new. The descriptive aliases
+# midnight/frost/ember resolve to clean/auto/amber via _THEME_ALIASES below.
+_SPECS: dict[str, ThemeSpec] = {
+    # ----- clean == Midnight (Tokyo Night), the DEFAULT: calm cool-blue --------
+    THEME_CLEAN: ThemeSpec(
+        name=THEME_CLEAN,
+        accent="#7aa2f7", accent_bright="#bb9af7", muted="#565f89",
+        success="#9ece6a", accent_ptk="#7aa2f7 bold",
+        faint="#3d59a1", inline_code="#7dcfff", bold_word="#c0caf5",
+        bullet="#7aa2f7", heading="#c0caf5", link="#7dcfff",
+        accent_secondary="#bb9af7", code_theme="native",
+        fg="#c0caf5", error="#f7768e", warning="#e0af68", em="#a9b1d6",
+        box_style="ROUNDED", border="#7aa2f7", banner_glyph="◆",
+        spinner="#7aa2f7", spinner_timer="#565f89",
+        muted_ptk="#565f89", status_num_ptk="#7aa2f7 bold",
+        completion_ptk="#7aa2f7",
+    ),
+    # ----- amber == Ember (Gruvbox): warm amber/gold ---------------------------
+    THEME_AMBER: ThemeSpec(
+        name=THEME_AMBER,
+        accent="#fe8019", accent_bright="#fabd2f", muted="#928374",
+        success="#b8bb26", accent_ptk="#fe8019 bold",
+        faint="#665c54", inline_code="#fe8019", bold_word="#fabd2f",
+        bullet="#fe8019", heading="#fabd2f", link="#8ec07c",
+        accent_secondary="#8ec07c", code_theme="native",
+        fg="#ebdbb2", error="#fb4934", warning="#fabd2f", em="#d3869b",
+        box_style="HEAVY", border="#fe8019", banner_glyph="◆",
+        spinner="#fe8019", spinner_timer="#928374",
+        muted_ptk="#928374", status_num_ptk="#fabd2f bold",
+        completion_ptk="#fe8019",
+    ),
+    # ----- orange == Ember (Gruvbox) too (kept for back-compat) ----------------
+    THEME_ORANGE: ThemeSpec(
+        name=THEME_ORANGE,
+        accent="#fe8019", accent_bright="#fabd2f", muted="#928374",
+        success="#b8bb26", accent_ptk="#fe8019 bold",
+        faint="#665c54", inline_code="#fe8019", bold_word="#fabd2f",
+        bullet="#fe8019", heading="#fabd2f", link="#8ec07c",
+        accent_secondary="#8ec07c", code_theme="native",
+        fg="#ebdbb2", error="#fb4934", warning="#fabd2f", em="#d3869b",
+        box_style="HEAVY", border="#fe8019", banner_glyph="◆",
+        spinner="#fe8019", spinner_timer="#928374",
+        muted_ptk="#928374", status_num_ptk="#fabd2f bold",
+        completion_ptk="#fe8019",
+    ),
+    # ----- auto == Frost (Nord): monochrome-elegant cool cyan ------------------
+    # auto still leaves color_system unset in _make_console (truecolor auto-detect).
+    THEME_AUTO: ThemeSpec(
+        name=THEME_AUTO,
+        accent="#88c0d0", accent_bright="#eceff4", muted="#4c566a",
+        success="#a3be8c", accent_ptk="#88c0d0 bold",
+        faint="#434c5e", inline_code="#8fbcbb", bold_word="#eceff4",
+        bullet="#88c0d0", heading="#e5e9f0", link="#81a1c1",
+        accent_secondary="#81a1c1", code_theme="nord",
+        fg="#d8dee9", error="#bf616a", warning="#ebcb8b", em="#b48ead",
+        # HORIZONTALS (not MINIMAL): clean top+bottom horizontal rules with no
+        # side borders — a genuinely minimal but VISIBLE frame, distinct from the
+        # other themes' ROUNDED/HEAVY/DOUBLE. MINIMAL renders as blank spaces, and
+        # on a rich Panel so does SIMPLE (its top/bottom box rows are blank), so
+        # both left Frost's answer box borderless; HORIZONTALS is the box that
+        # actually draws visible rules on a title-less Panel.
+        box_style="HORIZONTALS", border="#88c0d0", banner_glyph="◆",
+        spinner="#88c0d0", spinner_timer="#4c566a",
+        muted_ptk="#4c566a", status_num_ptk="#88c0d0 bold",
+        completion_ptk="#88c0d0",
+    ),
+    # ----- neon == Dracula: high-contrast punchy -------------------------------
+    THEME_NEON: ThemeSpec(
+        name=THEME_NEON,
+        accent="#bd93f9", accent_bright="#ff79c6", muted="#6272a4",
+        success="#50fa7b", accent_ptk="#bd93f9 bold",
+        faint="#44475a", inline_code="#8be9fd", bold_word="#ff79c6",
+        bullet="#bd93f9", heading="#f8f8f2", link="#8be9fd",
+        accent_secondary="#8be9fd", code_theme="dracula",
+        fg="#f8f8f2", error="#ff5555", warning="#f1fa8c", em="#ffb86c",
+        box_style="DOUBLE", border="#bd93f9", banner_glyph="◆",
+        spinner="#bd93f9", spinner_timer="#6272a4",
+        muted_ptk="#6272a4", status_num_ptk="#ff79c6 bold",
+        completion_ptk="#bd93f9",
+    ),
+    # ----- blossom == Catppuccin Mocha: soft pastel ----------------------------
+    THEME_BLOSSOM: ThemeSpec(
+        name=THEME_BLOSSOM,
+        accent="#cba6f7", accent_bright="#f5c2e7", muted="#6c7086",
+        success="#a6e3a1", accent_ptk="#cba6f7 bold",
+        faint="#45475a", inline_code="#94e2d5", bold_word="#f5c2e7",
+        bullet="#cba6f7", heading="#cdd6f4", link="#89b4fa",
+        accent_secondary="#89b4fa", code_theme="native",
+        fg="#cdd6f4", error="#f38ba8", warning="#f9e2af", em="#b4befe",
+        box_style="ROUNDED", border="#cba6f7", banner_glyph="❋",
+        spinner="#cba6f7", spinner_timer="#6c7086",
+        muted_ptk="#6c7086", status_num_ptk="#89b4fa bold",
+        completion_ptk="#cba6f7",
+    ),
+    # ----- ansi: the 16 basic ANSI colours only (rich names + ptk "ansi*") -----
+    # UNCHANGED: no truecolor hex; a thin "│" gutter. to_rich_theme still runs so
+    # it finally gets a markdown Theme (strips rich's default grey code box), but
+    # every colour is an ANSI name that downsamples to the user's own palette.
+    THEME_ANSI: ThemeSpec(
+        name=THEME_ANSI,
+        accent="yellow", accent_bright="bright_yellow", muted="bright_black",
+        success="green", accent_ptk="ansiyellow bold",
+        faint="bright_black", inline_code="yellow", bold_word="bright_yellow",
+        bullet="yellow", heading="yellow", link="bright_yellow",
+        accent_secondary="yellow", code_theme="ansi_dark",
+        fg="", gutter="│", error="red", warning="ansiyellow",
     ),
 }
 
 
+# Descriptive aliases (zero-break): each points at an existing _SPECS key so old
+# saved configs AND the new names all resolve to a spec. midnight≡clean,
+# frost≡auto, ember≡amber. Resolved by _resolve_theme wherever a theme key is
+# consumed (palette_for / _make_console / _code_theme_for). neon/blossom are real
+# _SPECS keys (not aliases).
+_THEME_ALIASES: dict[str, str] = {
+    THEME_MIDNIGHT: THEME_CLEAN,
+    THEME_FROST: THEME_AUTO,
+    THEME_EMBER: THEME_AMBER,
+}
+
+
+def _resolve_theme(theme: str) -> str:
+    """Canonical _SPECS key for a theme name, following descriptive aliases.
+
+    Every legacy key (clean/amber/orange/auto/ansi) and every new key
+    (neon/blossom + the midnight/frost/ember aliases) resolves to a real spec;
+    anything unknown falls back to the clean/default spec.
+    """
+    if theme in _SPECS:
+        return theme
+    alias = _THEME_ALIASES.get(theme)
+    if alias in _SPECS:
+        return alias
+    return THEME_CLEAN
+
+
+_PALETTES = {k: to_palette(v) for k, v in _SPECS.items()}
+
+
+# Backward-compatible thin shims for the prior per-theme rich Theme builders,
+# now derived from the shared spec (their look is the curated palette above).
+def _clean_theme():
+    return to_rich_theme(_SPECS[THEME_CLEAN])
+
+
+def _amber_theme():
+    return to_rich_theme(_SPECS[THEME_AMBER])
+
+
+def _orange_theme():
+    return to_rich_theme(_SPECS[THEME_ORANGE])
+
+
 def palette_for(theme: str) -> Palette:
-    """Accent palette for ``theme`` (defaults to the clean theme for an unknown
-    name — matching config.DEFAULT_THEME)."""
-    return _PALETTES.get(theme, _PALETTES[THEME_CLEAN])
+    """Accent palette for ``theme`` (descriptive aliases resolved; an unknown
+    name falls back to the clean theme — matching config.DEFAULT_THEME)."""
+    return _PALETTES[_resolve_theme(theme)]
 
 
 def _code_theme_for(theme: str) -> str:
-    """Pygments code-block theme for the active app theme.
+    """Pygments code-block theme for the active app theme, from ``_SPECS``.
 
     "ansi" (Dark mode) uses the ANSI-only "ansi_dark" highlighter so fenced code
-    stays within the 16 basic ANSI colors; "clean" uses the cool, low-contrast
-    "github-dark" style to match its grey palette; "orange"/"amber" use the warm
-    dark "native" style; every other theme keeps "monokai".
+    stays within the 16 basic ANSI colors; clean/amber/orange/blossom use
+    "native", auto uses "nord", and neon uses "dracula". Descriptive aliases are
+    resolved first. Any named style an installed pygments lacks (and an unknown
+    theme) falls back through native -> monokai so it never raises.
     """
-    if theme == THEME_ANSI:
-        return "ansi_dark"
-    if theme == THEME_CLEAN:
-        # "github-dark" is a calm, low-contrast dark pygments style that suits the
-        # minimal grey look; fall back to "native"/"monokai" if a future pygments
-        # drops it (both are also dark).
-        from pygments.styles import get_style_by_name
-
-        for name in ("github-dark", "native", "monokai"):
-            try:
-                get_style_by_name(name)
-                return name
-            except Exception:  # noqa: BLE001 - any lookup failure tries the next
-                continue
+    spec = _SPECS.get(_resolve_theme(theme))
+    if spec is None:
         return "monokai"
-    if theme in (THEME_ORANGE, THEME_AMBER):
-        # "native" is a warm dark pygments style; fall back to monokai (also
-        # amber-toned) if a future pygments drops it.
-        from pygments.styles import get_style_by_name
+    name = spec.code_theme
+    # ansi_dark is always available and must be returned verbatim (16-color).
+    if name == "ansi_dark":
+        return name
+    from pygments.styles import get_style_by_name
 
+    for candidate in (name, "native", "monokai"):
         try:
-            get_style_by_name("native")
-            return "native"
-        except Exception:  # noqa: BLE001 - any lookup failure keeps the safe default
-            return "monokai"
+            get_style_by_name(candidate)
+            return candidate
+        except Exception:  # noqa: BLE001 - any lookup failure tries the next
+            continue
     return "monokai"
 
 
 def _make_console(theme: str = THEME_AUTO):
     # NOTE: this param default is only a RENDERING fallback for a no-arg call; it
-    # is NOT the app-level default theme (that is config.DEFAULT_THEME = "amber").
+    # is NOT the app-level default theme (that is config.DEFAULT_THEME = "clean").
     # Every real caller passes config.theme explicitly, so the two never conflict.
     from rich.console import Console
 
@@ -940,18 +1144,20 @@ def _make_console(theme: str = THEME_AUTO):
     # The default ("auto") leaves color_system unset so rich auto-detects
     # truecolor/256 as the terminal allows (unchanged behavior).
     #
-    # theme == "orange": pass a rich Theme overriding markdown.* (inline code ->
-    # orange text, NO bgcolor). color_system is left to auto-detect (orange needs
-    # >16 colors; truecolor on a TTY, 256-color fallback otherwise).
-    if theme == THEME_ANSI and _stdout_is_tty():
-        return Console(color_system="standard", markup=False, highlight=False)
-    if theme == THEME_CLEAN:
-        return Console(theme=_clean_theme(), markup=False, highlight=False)
-    if theme == THEME_AMBER:
-        return Console(theme=_amber_theme(), markup=False, highlight=False)
-    if theme == THEME_ORANGE:
-        return Console(theme=_orange_theme(), markup=False, highlight=False)
-    return Console(markup=False, highlight=False)
+    # EVERY theme now gets a markdown rich Theme built from its spec (auto and
+    # ansi included), so inline code renders as themed TEXT with no default grey
+    # code box. Descriptive aliases (midnight/frost/ember) resolve to their canon-
+    # ical spec; an unknown name falls back to the clean/default spec.
+    resolved = _resolve_theme(theme)
+    rich_theme = to_rich_theme(_SPECS[resolved])
+    # ansi (Dark mode) on a real terminal ALSO pins color_system="standard" so
+    # rich downsamples every style to the 16 basic ANSI colors. Piped/non-tty runs
+    # fall through to auto-detect (color_system unset) and stay ANSI-free — the one
+    # special case, unchanged.
+    if resolved == THEME_ANSI and _stdout_is_tty():
+        return Console(theme=rich_theme, color_system="standard",
+                       markup=False, highlight=False)
+    return Console(theme=rich_theme, markup=False, highlight=False)
 
 
 def _build_orchestrator(
@@ -994,8 +1200,10 @@ def _build_orchestrator(
         # input() (finding #1).
         confirm_fn=confirm_fn,
         code_theme=code_theme,
-        # Accent threads to sub-agents so their footer/glyph match the theme.
+        # Accent (+ the full palette) thread to sub-agents so their footer/glyph
+        # AND their spinner match the theme, mirroring the orchestrator.
         accent=palette.accent,
+        palette=palette,
         # Sub-agents get the SAME project/cwd context as the orchestrator.
         workspace=workspace,
         # Context guard so a delegated coder/explorer compacts like the orchestrator
@@ -1080,8 +1288,11 @@ def _build_orchestrator(
         read_nudge_bytes=config.read_nudge_bytes,
         code_theme=code_theme,
         # Accent + gutter glyph drive the "▌ Answer" block, the footer rate, and
-        # the activity glyph for the top-level orchestrator.
+        # the activity glyph for the top-level orchestrator. The FULL palette is
+        # threaded too so the tool tree / footer / activity line reach the semantic
+        # tokens (success/error/muted) and the spinner reaches its theme colours.
         accent=palette.accent,
+        palette=palette,
         gutter_char=palette.gutter,
         # Passive conversation-memory: inject relevant past records each turn and
         # record new Q/A turns. Active only when enabled AND mode != "off".
@@ -1457,29 +1668,66 @@ class Repl:
         self.console.print(msg, style=palette_for(self.config.theme).accent)
 
     def _err(self, msg: str) -> None:
-        """Red error line (failed switch, bad input that aborts an action)."""
-        self.console.print(msg, style="red")
+        """Error line (failed switch, bad input that aborts an action), coloured
+        with the theme's semantic ``error`` token (ANSI 'red' for the ansi theme,
+        a themed hex otherwise)."""
+        self.console.print(msg, style=palette_for(self.config.theme).error)
+
+    def _print_help(self, arg: str = "") -> None:
+        """Render /help as grouped sections on the themed console.
+
+        Each section prints an accent title, then a row per command with the
+        ``/command`` column in the theme accent and its description in the muted
+        token. Presentation only — no command BEHAVIOUR changes. ``/help network``
+        shows the longer network + sandbox security notes instead. Piped/non-tty
+        runs stay plain and ANSI-free (the console emits no colour off a terminal),
+        so the command strings are always present for scripts/tests.
+        """
+        from rich.text import Text
+
+        if arg.strip().lower() == "network":
+            self.console.print(_HELP_NETWORK)
+            return
+        pal = palette_for(self.config.theme)
+        for title, rows in _HELP_SECTIONS:
+            self.console.print(Text(title, style=f"bold {pal.accent}"))
+            # Align the /command column within THIS section (short-command sections
+            # aren't padded out to the widest global command).
+            width = max((len(cmd) for cmd, _ in rows), default=0)
+            for cmd, desc in rows:
+                line = Text("  ")
+                line.append(cmd.ljust(width), style=pal.accent)
+                line.append("  ")
+                line.append(desc, style=pal.dim)
+                self.console.print(line)
+            self.console.print()
+        self.console.print(_HELP_FOOTER, style=pal.dim)
 
     def _print_banner(self) -> None:
         """Framed startup banner: provider/model, a green 'ready' dot, and a
         compact theme/privacy line — replacing the old flat one-liner."""
-        from rich import box
         from rich.align import Align
         from rich.console import Group
         from rich.panel import Panel
         from rich.text import Text
 
         pal = palette_for(self.config.theme)
+        # Per-theme banner glyphs (◆/❋ head, ● ready dot). ASCII-degrade them via
+        # the same encoding guard the tool tree uses so a legacy/ASCII console
+        # (LANG=C) shows "*"/"o" instead of "?" mojibake — the banner is the FIRST
+        # thing users see and previously had no guard.
+        diamond = pal.banner_glyph if _enc_can(self.console, pal.banner_glyph) else "*"
+        ready_dot = pal.ready_glyph if _enc_can(self.console, pal.ready_glyph) else "o"
         head = Text()
-        head.append("◆ ", style=pal.accent)
+        head.append(diamond + " ", style=pal.accent)
         # Short model only (drop the "<provider> ·" prefix AND any "org/" prefix,
         # e.g. qwen/qwen3.6-35b-a3b -> qwen3.6-35b-a3b); the pinned status bar
         # carries the fuller live context.
         short_model = (self.config.model or "").rsplit("/", 1)[-1]
         head.append(short_model, style=pal.bright)  # make the model pop
         head.append("   ")
-        head.append("● ", style=pal.success)
-        head.append("ready", style="dim")
+        head.append(ready_dot + " ", style=pal.success)
+        head.append("ready", style=pal.dim)
         sub = Text(style=pal.dim)  # muted accent sub-line (on-theme, not grey)
         sub.append(f"theme {self.config.theme}")
         sub.append("  ·  ")
@@ -1497,7 +1745,7 @@ class Repl:
         # the terminal width. (justify="center" alone does NOT center an
         # expand=False panel.)
         self.console.print(Align.center(Panel(
-            Group(head, sub), box=box.ROUNDED, border_style=pal.accent,
+            Group(head, sub), box=_box_for(pal.box_style), border_style=pal.accent,
             title="llmc-code", title_align="left", padding=(0, 1),
             expand=False,  # hug the content instead of spanning the full width
         )))
@@ -1510,12 +1758,21 @@ class Repl:
             privacy = ("network on · web_fetch SSRF-safe+gated · "
                        "run_bash gated (full FS access)")
         # Centered to match the centered header block above (justify="center"
-        # centers plain text within the terminal width).
-        self.console.print(privacy, style="dim", justify="center")
+        # centers plain text within the terminal width). Sub-lines use the theme's
+        # muted token (still recessive, now theme-tinted rather than flat grey).
+        self.console.print(privacy, style=pal.dim, justify="center")
         self.console.print(
             "Type /help for commands · Ctrl+O reveals tool detail",
-            style="dim", justify="center",
+            style=pal.dim, justify="center",
         )
+        # First-run affordance: ONE quiet example line so a new user has an obvious
+        # first move. Gated on is_terminal so piped/one-shot/sub-agent runs stay
+        # byte-clean (never printed off a real terminal).
+        if getattr(self.console, "is_terminal", False):
+            self.console.print(
+                "try: explain this repo · /help for commands",
+                style=pal.dim, justify="center",
+            )
         # Breathing room: a blank line below the banner so the first prompt and
         # answer box are not glued to the header (clean, uncongested startup).
         self.console.print()
@@ -1578,7 +1835,7 @@ class Repl:
         if cmd in ("/exit", "/quit"):
             return False
         if cmd == "/help":
-            self.console.print(HELP_TEXT)
+            self._print_help(arg)
         elif cmd == "/clear":
             self.agent = self._new_agent()
             # Wipe the visible scrollback too (not just the history), so /clear is
@@ -1674,19 +1931,29 @@ class Repl:
                 # Rebuild the console under the new color_system (a Console's
                 # color system is fixed at construction), then rebuild the agent
                 # so it both points at the new console AND uses the matching
-                # code_theme (ansi_dark vs monokai) for Markdown code blocks.
+                # code_theme (ansi_dark / nord / dracula / native ...) for Markdown
+                # code blocks. Everything is re-derived from the resolved spec so
+                # there is no parallel theming path.
                 self.config.theme = arg
                 self.console = _make_console(arg)
                 self.agent = self._new_agent()
-                # Restyle the live input "❯" glyph to the new theme's accent.
-                # PromptSession reads .style per prompt() call, so the next prompt
-                # picks it up with no relayout. (self.session is None until run()
-                # builds it — a no-op for the slash-command unit tests.)
+                # Re-derive the whole live ptk Style from the resolved spec so the
+                # input glyph, status bar, placeholder, and completion menu all
+                # restyle on switch. PromptSession reads .style per prompt() call,
+                # so the next prompt picks it up with no relayout. (self.session is
+                # None until run() builds it — a no-op for the slash-command unit
+                # tests.)
                 if self.session is not None:
                     from prompt_toolkit.styles import Style as PTKStyle
 
+                    spec = _SPECS[_resolve_theme(arg)]
                     self.session.style = PTKStyle.from_dict(
-                        {"prompt": palette_for(arg).ptk}
+                        {
+                            "prompt": spec.accent_ptk,
+                            "bottom-toolbar": f"noreverse {spec.muted_ptk}".strip(),
+                            "placeholder": spec.muted_ptk,
+                            "completion-menu.completion.current": spec.completion_ptk,
+                        }
                     )
                 self._persist_config()
                 self._ok(f"[theme -> {arg}]  {self._status()}")
@@ -2915,15 +3182,19 @@ class Repl:
         if not text:
             self._status_cache = ""
             return
-        # Style: dim base with a subtle accent on the NUMBERS. re.split's capture
-        # group puts digit-runs at odd indices; they read in the theme accent
-        # (pal.ptk — the ptk-safe accent spelling), the rest stays dim grey.
+        # Style: muted base with a subtle accent on the NUMBERS. re.split's capture
+        # group puts digit-runs at odd indices; they read in the theme's ptk number
+        # token (status_num_ptk), the rest in the theme's muted ptk grey. Both fall
+        # back to their historic spellings when a theme leaves them unset (the ansi
+        # spec), so ansi keeps its 16-colour base.
         pal = palette_for(self.config.theme)
+        num_style = pal.status_num_ptk or pal.ptk
+        base_style = pal.muted_ptk or "fg:ansibrightblack"
         frags = []
         for i, seg in enumerate(re.split(r"(\d[\d.]*)", " " + text)):
             if not seg:
                 continue
-            frags.append(((pal.ptk if i % 2 == 1 else "fg:ansibrightblack"), seg))
+            frags.append(((num_style if i % 2 == 1 else base_style), seg))
         self._status_cache = FormattedText(frags)
 
     def _run_shell_passthrough(self, cmd: str) -> None:
@@ -3149,6 +3420,17 @@ class Repl:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.application import run_in_terminal
         from prompt_toolkit.key_binding import KeyBindings
+        from prompt_toolkit.output.color_depth import ColorDepth
+
+        # Match prompt_toolkit's color depth to rich's truecolor when the terminal
+        # advertises it, so the prompt glyph, bottom status bar and y/N confirm emit
+        # exact 38;2;r;g;b instead of a 256-color approximation. None lets ptk
+        # auto-detect (unchanged behaviour for non-truecolor terminals).
+        _cd = (
+            ColorDepth.DEPTH_24_BIT
+            if os.environ.get("COLORTERM", "").lower() in ("truecolor", "24bit")
+            else None
+        )
 
         # Ctrl+O: reveal the most-recent turn's full detail. LIMITATION: this is
         # handled only while the input prompt is active (line-based REPL). It
@@ -3173,9 +3455,17 @@ class Repl:
         pal = palette_for(self.config.theme)
         # "bottom-toolbar": override prompt_toolkit's default reverse-video bar to
         # a flat, non-inverted line so the pinned status bar reads as calm dim text
-        # (its fragments carry their own fg; see _refresh_status_bar).
+        # (its fragments carry their own fg; see _refresh_status_bar). The full dict
+        # MIRRORS the /theme live-rebuild (placeholder + completion-menu keys) so
+        # the input glyph, placeholder, and completion menu are themed from the very
+        # FIRST render — not only after a theme switch.
         ptk_style = PTKStyle.from_dict(
-            {"prompt": pal.ptk, "bottom-toolbar": "noreverse"}
+            {
+                "prompt": pal.ptk,
+                "bottom-toolbar": f"noreverse {pal.muted_ptk}".strip(),
+                "placeholder": pal.muted_ptk,
+                "completion-menu.completion.current": pal.completion_ptk,
+            }
         )
         # Persistent line history (also powers prompt_toolkit's built-in Ctrl-R
         # reverse search). Best-effort: a failure to create the file/dir must not
@@ -3199,7 +3489,8 @@ class Repl:
         from prompt_toolkit.formatted_text import FormattedText
 
         placeholder = FormattedText(
-            [("fg:ansibrightblack", "Ask anything · / commands · @ files")]
+            [(pal.muted_ptk or "fg:ansibrightblack",
+              "Ask anything · / commands · @ files")]
         )
         ptk_session = PromptSession(
             key_bindings=kb,
@@ -3210,6 +3501,7 @@ class Repl:
             enable_open_in_editor=True,
             bottom_toolbar=self._status_bar,
             placeholder=placeholder,
+            color_depth=_cd,
         )
         # Connect MCP servers (if any are configured AND mcp is enabled) on a
         # BACKGROUND daemon thread so the first prompt is not blocked ~5s by

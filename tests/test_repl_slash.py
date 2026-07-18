@@ -481,15 +481,28 @@ def test_theme_switch_updates_persists_and_rebuilds(repl, capsys, monkeypatch):
     # The rebuilt agent uses the ANSI code theme for Markdown code blocks.
     assert repl.agent.code_theme == "ansi_dark"
 
-    # Switching back to auto restores the default color system + code theme.
+    # Switching to auto restores a truecolor (non-standard) color system; auto is
+    # now the Frost (Nord) look, so its fenced-code style is "nord".
     repl._dispatch_slash("/theme auto")
     assert repl.config.theme == "auto"
     assert repl.console.color_system != "standard"
-    assert repl.agent.code_theme == "monokai"
+    assert repl.agent.code_theme == "nord"
+
+
+def test_theme_switch_accepts_new_curated_names(repl, capsys, monkeypatch):
+    monkeypatch.setattr(r, "save_config", lambda cfg, *a, **k: None)
+    # A new curated name (Dracula) switches cleanly and rebuilds the code theme.
+    assert repl._dispatch_slash("/theme neon") is True
+    assert repl.config.theme == "neon"
+    assert repl.agent.code_theme == "dracula"
+    # A descriptive alias resolves to its canonical spec (frost -> auto -> nord).
+    assert repl._dispatch_slash("/theme frost") is True
+    assert repl.config.theme == "frost"
+    assert repl.agent.code_theme == "nord"
 
 
 def test_theme_rejects_bad_value(repl, capsys):
-    repl._dispatch_slash("/theme neon")
+    repl._dispatch_slash("/theme neon-pink")
     assert "Usage: /theme" in capsys.readouterr().out
     assert repl.config.theme == "clean"  # unchanged (fresh default)
 

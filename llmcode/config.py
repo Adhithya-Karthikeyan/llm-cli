@@ -35,27 +35,45 @@ PROVIDER_MOCK = "mock"
 PROVIDERS = (PROVIDER_LOCAL, PROVIDER_MOCK)
 
 # Color/markdown themes for the terminal renderer (Config.theme, /theme, --theme).
-# "auto" keeps the current behavior: rich's default color_system (truecolor/256
-# as the terminal allows) and monokai-highlighted code blocks. "ansi" is a "Dark
-# mode (ANSI colors only)" — the console downsamples EVERY color to the 16 basic
-# ANSI colors (which the terminal then renders per the user's own palette) and
-# code blocks use the ANSI-only "ansi_dark" highlighter, so NO truecolor escape
-# (\x1b[38;2;R;G;Bm) is ever emitted, only basic SGR (\x1b[32m, \x1b[2m, ...).
-# "orange" is an orange-on-black markdown theme: inline code and accents render
-# as orange TEXT with NO background box (overrides rich's markdown.* styles).
-# "amber" is the polished warm theme: a framed startup banner, gold bold words,
-# amber headers/bullets, orange inline code (no box), and a styled "❯" prompt.
-# "clean" is the DEFAULT minimal DARK theme: near-monochrome grey scale with a
-# single soft accent, LOW-KEY dim/grey borders, and white-ish bold for emphasis.
-# The shared layout (banner + a thin rounded BOX around each answer with
-# breathing room above/below + prompt + colour-coded status) is palette-driven,
-# so EVERY theme gets it — only the accent/border colour differs.
+# The shared layout (banner + a thin BOX around each answer with breathing room
+# above/below + prompt + colour-coded status) is palette-driven, so EVERY theme
+# gets it — only the accent/border colour + box shape differ.
+#
+# LEGACY keys (saved configs keep resolving; their LOOK is now a curated palette):
+#   "clean"  = the DEFAULT — now a calm cool-blue Midnight (Tokyo Night) look
+#              (was a near-monochrome grey scale). Alias: "midnight".
+#   "amber"  = warm amber/gold Ember (Gruvbox) look. Alias: "ember".
+#   "orange" = the same warm Ember look (kept for back-compat).
+#   "auto"   = cool cyan Frost (Nord) look; still leaves rich's color_system
+#              unset for truecolor/256 auto-detect. Alias: "frost".
+#   "ansi"   = "Dark mode (ANSI colors only)" — the console downsamples EVERY
+#              color to the 16 basic ANSI colors (rendered per the user's own
+#              palette) and code blocks use the ANSI-only "ansi_dark" highlighter,
+#              so NO truecolor escape (\x1b[38;2;R;G;Bm) is ever emitted, only
+#              basic SGR (\x1b[32m, \x1b[2m, ...).
+#
+# NEW curated keys (each a structurally distinct dark palette):
+#   "neon"    = high-contrast Dracula.
+#   "blossom" = soft pastel Catppuccin Mocha.
+#   "frost"   = cool cyan Nord (alias of "auto").
+#   "midnight"= cool blue Tokyo Night (alias of "clean").
+#   "ember"   = warm Gruvbox (alias of "amber").
 THEME_CLEAN = "clean"
 THEME_AUTO = "auto"
 THEME_ANSI = "ansi"
 THEME_ORANGE = "orange"
 THEME_AMBER = "amber"
-THEMES = (THEME_CLEAN, THEME_AUTO, THEME_ANSI, THEME_ORANGE, THEME_AMBER)
+# New curated theme keys (midnight/frost/ember alias clean/auto/amber; neon and
+# blossom are genuinely new palettes). All are valid THEMES values below.
+THEME_NEON = "neon"
+THEME_BLOSSOM = "blossom"
+THEME_FROST = "frost"
+THEME_MIDNIGHT = "midnight"
+THEME_EMBER = "ember"
+THEMES = (
+    THEME_CLEAN, THEME_AUTO, THEME_ANSI, THEME_ORANGE, THEME_AMBER,
+    THEME_NEON, THEME_BLOSSOM, THEME_FROST, THEME_MIDNIGHT, THEME_EMBER,
+)
 # The default theme for fresh installs. Existing configs keep their saved theme;
 # load_config falls back to this when a persisted theme is missing/unknown.
 DEFAULT_THEME = THEME_CLEAN
@@ -257,9 +275,11 @@ class Config:
     # excessive backstop that let a confused model burn many extra rounds.)
     max_iterations: int = 80
     effort: str = ""  # "" = unset; else one of EFFORT_LEVELS
-    # Terminal color/markdown theme. DEFAULT "clean" (minimal dark, low-key grey)
-    # for fresh installs; "amber" is the warm polished look; "auto" is rich's
-    # truecolor default; "ansi" is the Dark mode (ANSI colors only) — see THEMES.
+    # Terminal color/markdown theme. DEFAULT "clean" (now a calm cool-blue
+    # Midnight/Tokyo-Night look) for fresh installs; "amber"/"ember" is the warm
+    # Gruvbox look; "auto"/"frost" is cool Nord; "neon" (Dracula) and "blossom"
+    # (Catppuccin) are new curated palettes; "ansi" is Dark mode (ANSI colors
+    # only) — see THEMES.
     theme: str = DEFAULT_THEME
     # PRIVATE / OFFLINE lockdown mode. DEFAULT OFF: network is enabled out of the
     # box (web_fetch on, run_bash un-sandboxed, non-loopback base_url + MCP all

@@ -345,6 +345,115 @@ def test_non_tty_render_has_no_ansi(tmp_workspace):
     assert "⎿" in text
 
 
+def test_every_theme_resolves_and_pipes_ansi_free(tmp_workspace):
+    """EVERY theme key — legacy, new curated, and descriptive alias — resolves
+    via palette_for/_make_console/_code_theme_for without error, and rendering a
+    markdown answer through a NON-tty themed console emits zero ANSI escapes
+    (the byte-clean piped guarantee holds for every theme, new ones included)."""
+    import io
+    from rich.console import Console
+    from llmcode.config import THEMES
+    from llmcode.repl import (
+        _SPECS, _code_theme_for, _make_console, _resolve_theme, palette_for,
+        to_rich_theme,
+    )
+
+    md = "**bold** and `inline code` and a [link](x)\n\n# Heading\n"
+    for theme in THEMES:
+        # Resolves without raising and lands on a real spec.
+        assert _resolve_theme(theme) in _SPECS
+        palette_for(theme)          # no error
+        _make_console(theme)        # no error
+        code_theme = _code_theme_for(theme)
+        # Render the SAME rich Theme _make_console applies, but to a non-tty file
+        # so the piped path is exercised: it must stay ANSI-free.
+        buf = io.StringIO()
+        console = Console(
+            theme=to_rich_theme(_SPECS[_resolve_theme(theme)]),
+            markup=False, highlight=False, file=buf, force_terminal=False,
+        )
+        agent = Agent(
+            provider=MockProvider(scenario="hello"), system_prompt="s",
+            tool_names=FULL, auto_confirm=True, console=console,
+            code_theme=code_theme,
+        )
+        agent._print_markdown(md)
+        agent.run("go")
+        agent.render_details(console)
+        assert "\x1b[" not in buf.getvalue(), f"{theme} leaked ANSI when piped"
+
+
+# ----- themed answer box / link colour (rendering-defect fixes) -----
+
+def test_answer_box_follows_palette_box_style(tmp_workspace):
+    """The answer Panel uses the theme's box_style (ember → HEAVY, neon → DOUBLE,
+    frost → SIMPLE), so the box matches the banner instead of a hardcoded ROUNDED."""
+    import io
+    from rich.console import Console
+    from llmcode.repl import _SPECS, _resolve_theme, to_palette
+
+    cases = {
+        "ember": ("━", ("╭", "═")),   # HEAVY: heavy horizontal, no ROUNDED/DOUBLE
+        "neon":  ("═", ("╭", "━")),   # DOUBLE: double horizontal
+        # HORIZONTALS: light rule top+bottom, no side bars / no corners.
+        "frost": ("─", ("╭", "━", "═", "│", "┃", "║")),
+    }
+    for theme, (must_have, must_not) in cases.items():
+        spec = _SPECS[_resolve_theme(theme)]
+        buf = io.StringIO()
+        console = Console(markup=False, highlight=False, file=buf,
+                          force_terminal=True, width=40, color_system="truecolor")
+        agent = Agent(
+            provider=MockProvider(scenario="hello"), system_prompt="s",
+            tool_names=FULL, auto_confirm=True, console=console,
+            accent=spec.accent, palette=to_palette(spec),
+        )
+        agent._print_markdown("hello world")
+        out = buf.getvalue()
+        assert must_have in out, f"{theme}: expected {must_have!r} box glyph"
+        for glyph in must_not:
+            assert glyph not in out, f"{theme}: unexpected {glyph!r} box glyph"
+
+
+def test_answer_box_palette_less_agent_falls_back_to_rounded(tmp_workspace):
+    """A palette-less agent (sub-agent/tests) keeps the historic ROUNDED box."""
+    import io
+    from rich.console import Console
+
+    buf = io.StringIO()
+    console = Console(markup=False, highlight=False, file=buf,
+                      force_terminal=True, width=40, color_system="truecolor")
+    agent = Agent(
+        provider=MockProvider(scenario="hello"), system_prompt="s",
+        tool_names=FULL, auto_confirm=True, console=console,
+        accent="#ffffff", palette=None,
+    )
+    agent._print_markdown("hello world")
+    assert "╭" in buf.getvalue()  # ROUNDED corner
+
+
+def test_frost_spec_box_style_is_visible_horizontals():
+    """Frost/Nord uses HORIZONTALS (visible top+bottom rules) — MINIMAL, and on a
+    Panel SIMPLE too, render as blank spaces, so the box would look borderless."""
+    from rich import box
+    from llmcode.repl import _SPECS, _resolve_theme, _box_for
+
+    assert _SPECS[_resolve_theme("frost")].box_style == "HORIZONTALS"
+    assert _box_for("HORIZONTALS") is box.HORIZONTALS
+
+
+def test_link_url_uses_themed_link_colour():
+    """markdown.link_url (rich colours the VISIBLE anchor text with it) is the
+    themed link colour + underline, not faint — so link text reads as a link."""
+    from llmcode.repl import _SPECS, _resolve_theme, to_rich_theme
+
+    for theme in ("neon", "ember", "frost", "clean"):
+        spec = _SPECS[_resolve_theme(theme)]
+        style = to_rich_theme(spec).styles["markdown.link_url"]
+        assert style.color.name == spec.link
+        assert style.underline is True
+
+
 # ----- newline-in-arg sanitization (the "one collapsed line" contract) -----
 
 def test_tool_call_label_collapses_newline_in_arg():
@@ -514,7 +623,8 @@ def test_code_theme_for_helper():
     from llmcode.repl import _code_theme_for
 
     assert _code_theme_for("ansi") == "ansi_dark"
-    assert _code_theme_for("auto") == "monokai"
+    # auto is now the Frost (Nord) look, so its code fence uses the "nord" style.
+    assert _code_theme_for("auto") == "nord"
 
 
 def test_agent_default_code_theme_is_monokai():
@@ -540,7 +650,8 @@ def test_agent_uses_ansi_dark_when_built_for_ansi_theme():
     agent_auto = _build_orchestrator(
         MockProvider(), cfg_auto, _make_console("auto"), auto_confirm=True
     )
-    assert agent_auto.code_theme == "monokai"
+    # auto == Frost (Nord): its fenced code uses the "nord" pygments style.
+    assert agent_auto.code_theme == "nord"
 
 
 def test_ansi_console_emits_no_truecolor_escapes(tmp_workspace):
@@ -586,25 +697,28 @@ def test_ansi_console_emits_no_truecolor_escapes(tmp_workspace):
 def test_make_console_orange_inline_code_has_no_background_box():
     """THE key assertion: orange theme's markdown.code has NO bgcolor, so inline
     code renders as orange TEXT with no grey/black background box (rich's
-    default markdown.code box is removed)."""
-    from llmcode.repl import _make_console, _ORANGE
+    default markdown.code box is removed). orange now carries the warm Ember
+    (Gruvbox) palette, so its inline-code orange is #fe8019."""
+    from llmcode.repl import _make_console
 
     style = _make_console("orange").get_style("markdown.code")
     assert style.bgcolor is None  # no box
     assert style.bold is True
-    # foreground is the orange truecolor (255, 158, 61 == #ff9e3d).
+    # foreground is the Ember orange truecolor (254, 128, 25 == #fe8019).
     assert style.color is not None
-    assert style.color.get_truecolor() == (255, 158, 61)
-    assert _ORANGE == "#ff9e3d"
+    assert style.color.get_truecolor() == (254, 128, 25)
 
 
-def test_make_console_orange_leaves_other_themes_unchanged():
-    """orange is purely additive: auto and ansi keep rich's default
-    markdown.code (which HAS a bgcolor box) — we did not alter them."""
+def test_make_console_every_theme_has_no_inline_code_box():
+    """Step 2: EVERY theme (auto and ansi included) now gets a markdown rich
+    Theme, so inline code renders as themed TEXT with NO default grey/black
+    background box — the old auto/ansi default code box is gone."""
+    from llmcode.config import THEMES
     from llmcode.repl import _make_console
 
-    assert _make_console("auto").get_style("markdown.code").bgcolor is not None
-    assert _make_console("ansi").get_style("markdown.code").bgcolor is not None
+    for theme in THEMES:
+        style = _make_console(theme).get_style("markdown.code")
+        assert style.bgcolor is None, f"{theme} inline code should have no box"
 
 
 def test_orange_in_themes_and_load_config_accepts_it(tmp_path):
@@ -653,43 +767,43 @@ def test_clean_theme_registered_and_selectable(tmp_path):
     p = tmp_path / "config.json"
     p.write_text(json.dumps({"theme": "clean"}), encoding="utf-8")
     assert load_config(p).theme == "clean"
-    # Builds a console without raising and has a low-key grey accent palette.
+    # Builds a console without raising and has the Midnight (Tokyo Night) blue
+    # accent palette (the default clean look is now cool-blue, not grey).
     _make_console("clean")
     pal = palette_for("clean")
-    assert pal.accent == "#8b949e"
+    assert pal.accent == "#7aa2f7"
     # Code theme is a real, importable pygments style.
     get_style_by_name(_code_theme_for("clean"))
 
 
 def test_make_console_clean_inline_code_has_no_background_box():
-    """Clean inline code is grey TEXT with NO bgcolor box (minimal, no boxes)."""
+    """Clean (Midnight) inline code is cyan TEXT with NO bgcolor box."""
     from llmcode.repl import _make_console
 
     style = _make_console("clean").get_style("markdown.code")
     assert style.bgcolor is None  # no box
     assert style.color is not None
+    assert style.color.get_truecolor() == (125, 207, 255)  # #7dcfff
 
 
 def test_make_console_amber_inline_code_has_no_background_box():
-    """Amber inline code is orange TEXT with NO bgcolor box (mirrors orange)."""
-    from llmcode.repl import _make_console, _AMBER
+    """Amber (Ember/Gruvbox) inline code is orange TEXT with NO bgcolor box."""
+    from llmcode.repl import _make_console
 
     style = _make_console("amber").get_style("markdown.code")
     assert style.bgcolor is None  # no box
     assert style.bold is True
     assert style.color is not None
-    assert style.color.get_truecolor() == (255, 158, 61)  # #ff9e3d
-    assert _AMBER == "#ff9e3d"
+    assert style.color.get_truecolor() == (254, 128, 25)  # #fe8019
 
 
 def test_amber_strong_is_gold():
-    """**bold** words render in GOLD so important words pop."""
-    from llmcode.repl import _make_console, _AMBER_GOLD
+    """**bold** words render in GOLD (Ember/Gruvbox #fabd2f) so key words pop."""
+    from llmcode.repl import _make_console
 
     style = _make_console("amber").get_style("markdown.strong")
     assert style.bold is True
-    assert style.color.get_truecolor() == (255, 207, 107)  # #ffcf6b
-    assert _AMBER_GOLD == "#ffcf6b"
+    assert style.color.get_truecolor() == (250, 189, 47)  # #fabd2f
 
 
 def test_code_theme_for_amber_is_valid_pygments():
@@ -705,19 +819,26 @@ def test_palette_for_known_and_unknown():
     from llmcode.repl import palette_for
 
     amber = palette_for("amber")
-    assert amber.accent == "#ff9e3d"
+    assert amber.accent == "#fe8019"  # Ember (Gruvbox) orange
     assert amber.gutter == "▌"
     assert amber.prompt == "❯"
     # ansi stays inside the 16 basic colours and uses a thin gutter.
     ansi = palette_for("ansi")
     assert ansi.accent == "yellow"
     assert ansi.gutter == "│"
-    # auto is the cool cyan accent.
-    assert palette_for("auto").accent == "#5fd7ff"
-    # clean is the low-key grey default accent.
-    assert palette_for("clean").accent == "#8b949e"
+    # auto is the cool cyan Frost (Nord) accent.
+    assert palette_for("auto").accent == "#88c0d0"
+    # clean is the Midnight (Tokyo Night) blue default accent.
+    assert palette_for("clean").accent == "#7aa2f7"
     # an unknown theme falls back to the clean palette (matches DEFAULT_THEME).
-    assert palette_for("nope").accent == "#8b949e"
+    assert palette_for("nope").accent == "#7aa2f7"
+    # descriptive aliases resolve to their canonical spec's palette.
+    assert palette_for("midnight").accent == "#7aa2f7"
+    assert palette_for("frost").accent == "#88c0d0"
+    assert palette_for("ember").accent == "#fe8019"
+    # new curated themes have their own accents.
+    assert palette_for("neon").accent == "#bd93f9"
+    assert palette_for("blossom").accent == "#cba6f7"
 
 
 # ----- the thin accent "Answer" box ----------------------------------------
@@ -826,8 +947,10 @@ def test_accent_footer_rate_not_dimmed(tmp_workspace):
 
 
 def test_footer_shows_model_time_speed(tmp_workspace):
-    """The footer renders the reference 'Model: ... | Time: ...s | Speed: ...
-    tok/s' line, with the model name read from the provider."""
+    """The footer renders the reference 'Model: ... · Time: ...s · Speed: ...
+    tok/s' line, with the model name read from the provider. The segment
+    separator is the middle dot '·' so the one-shot footer and the pinned status
+    bar read as the same object."""
     import io
 
     buf = io.StringIO()
@@ -841,7 +964,8 @@ def test_footer_shows_model_time_speed(tmp_workspace):
     assert "Model: qwen2.5-coder" in line
     assert "Time: 1.49s" in line
     assert "Speed:" in line and "tok/s" in line
-    assert " | " in line
+    assert " · " in line  # middle-dot separator (matches the pinned status bar)
+    assert " | " not in line  # the old pipe separator is gone
 
 
 def test_left_heading_not_centered(tmp_workspace):
@@ -858,6 +982,85 @@ def test_left_heading_not_centered(tmp_workspace):
     assert line.lstrip() == line  # starts at column 0
 
 
+# ----- Step 3: semantic tokens flow into the tool tree / footer / activity ----
+
+def test_tool_tree_uses_palette_semantic_tokens_on_tty(tmp_workspace):
+    """With a threaded palette on a TERMINAL, the tool-tree head is the theme
+    ACCENT on success and the theme ERROR on failure, the ✓ is the SUCCESS token,
+    and the ⎿ connector is MUTED — no more hardcoded green/red. Uses a truecolor
+    console so the theme hex SGR are directly assertable."""
+    import io
+    from rich.console import Console
+    from llmcode.repl import palette_for
+
+    pal = palette_for("neon")  # accent #bd93f9, success #50fa7b, error #ff5555
+    buf = io.StringIO()
+    console = Console(markup=False, highlight=False, file=buf,
+                      force_terminal=True, color_system="truecolor", width=100)
+    agent = Agent(provider=MockProvider(), system_prompt="s", tool_names=[],
+                  console=console, accent=pal.accent, palette=pal)
+    # SUCCESS row: accent head glyph + success ✓.
+    agent._render_tool_tree("read_file", {"path": "x.py"}, "3 lines", False)
+    out = buf.getvalue()
+    assert "38;2;189;147;249" in out  # accent head glyph (#bd93f9)
+    assert "38;2;80;250;123" in out   # success ✓ (#50fa7b)
+    # FAILURE row: head glyph + summary both read in the error token.
+    buf2 = io.StringIO()
+    console.file = buf2
+    agent._render_tool_tree("run_bash", {"command": "false"}, "✗ boom", True)
+    out2 = buf2.getvalue()
+    assert "38;2;255;85;85" in out2   # error head + summary (#ff5555)
+
+
+def test_tool_tree_and_footer_ansi_free_when_piped_even_with_palette(tmp_workspace):
+    """The byte-clean guarantee: with a full palette threaded in, a NON-terminal
+    (piped/scripted) console still emits ZERO ANSI from the tool tree, the footer,
+    and the collapsed activity line — the semantic colour lives only behind the
+    is_terminal gate."""
+    import io
+    from rich.console import Console
+    from llmcode.repl import palette_for
+
+    pal = palette_for("neon")
+    buf = io.StringIO()
+    console = Console(markup=False, highlight=False, file=buf,
+                      force_terminal=False, width=100)
+    agent = Agent(provider=MockProvider(), system_prompt="s", tool_names=[],
+                  console=console, accent=pal.accent, palette=pal)
+    agent._render_tool_tree("read_file", {"path": "x.py"}, "3 lines", False)
+    agent._render_tool_tree("run_bash", {"command": "false"}, "✗ boom", True)
+    agent._print_footer("hello there", 12, 0.5)
+    agent.last_turn_details = [
+        {"name": "read_file", "args": {"path": "x.py"}, "result": {}, "ok": True,
+         "elapsed": 0.1},
+        {"name": "run_bash", "args": {"command": "false"}, "result": {}, "ok": False,
+         "elapsed": 0.1},
+    ]
+    agent._print_activity_summary()
+    assert "\x1b[" not in buf.getvalue()  # clean when piped, palette notwithstanding
+
+
+def test_activity_summary_glyph_uses_error_token_on_failure(tmp_workspace):
+    """The collapsed activity ⏺ reads in the theme ERROR token when any call
+    failed (accent otherwise), matching the expanded tool-tree head."""
+    import io
+    from rich.console import Console
+    from llmcode.repl import palette_for
+
+    pal = palette_for("neon")
+    buf = io.StringIO()
+    console = Console(markup=False, highlight=False, file=buf,
+                      force_terminal=True, color_system="truecolor", width=100)
+    agent = Agent(provider=MockProvider(), system_prompt="s", tool_names=[],
+                  console=console, accent=pal.accent, palette=pal)
+    agent.last_turn_details = [
+        {"name": "run_bash", "args": {"command": "false"}, "result": {}, "ok": False,
+         "elapsed": 0.1},
+    ]
+    agent._print_activity_summary()
+    assert "38;2;255;85;85" in buf.getvalue()  # error #ff5555 glyph
+
+
 def test_build_orchestrator_threads_accent_and_gutter():
     """The orchestrator (and its sub-agents) get the theme's accent + gutter."""
     from llmcode.config import Config
@@ -867,7 +1070,7 @@ def test_build_orchestrator_threads_accent_and_gutter():
     agent = _build_orchestrator(
         MockProvider(), cfg, _make_console("amber"), auto_confirm=True
     )
-    assert agent.accent == "#ff9e3d"
+    assert agent.accent == "#fe8019"  # Ember (Gruvbox) orange
     assert agent.gutter_char == "▌"
 
     cfg_ansi = Config(provider="mock", theme="ansi")
@@ -878,10 +1081,28 @@ def test_build_orchestrator_threads_accent_and_gutter():
     assert agent_ansi.gutter_char == "│"
 
 
+def test_build_orchestrator_threads_full_palette():
+    """Step 3: the orchestrator also receives the FULL palette (semantic tokens +
+    spinner colours), not just the accent — so its tool tree / footer / spinner
+    can reach success/error/muted/spinner."""
+    from llmcode.config import Config
+    from llmcode.repl import _build_orchestrator, _make_console, palette_for
+
+    cfg = Config(provider="mock", theme="neon")
+    agent = _build_orchestrator(
+        MockProvider(), cfg, _make_console("neon"), auto_confirm=True
+    )
+    assert agent.palette is not None
+    assert agent.palette.accent == palette_for("neon").accent  # #bd93f9
+    assert agent.palette.error == "#ff5555"
+    assert agent.palette.success == "#50fa7b"
+    assert agent.palette.spinner == "#bd93f9"
+
+
 def test_orange_render_emits_orange_fg_and_no_bg_box():
     """Render markdown with inline code through an orange-themed recording
-    console and assert the output carries the orange foreground SGR
-    (38;2;255;158;61) and NO background-color SGR (48;2;) around the code."""
+    console and assert the output carries the Ember orange foreground SGR
+    (38;2;254;128;25) and NO background-color SGR (48;2;) around the code."""
     from rich.console import Console
     from rich.markdown import Markdown
     from llmcode.repl import _orange_theme, _code_theme_for
@@ -896,5 +1117,5 @@ def test_orange_render_emits_orange_fg_and_no_bg_box():
             code_theme=_code_theme_for("orange"),
         ))
     out = cap.get()
-    assert "38;2;255;158;61" in out  # orange inline-code foreground
+    assert "38;2;254;128;25" in out  # Ember orange inline-code foreground
     assert "48;2;" not in out        # no background-color box anywhere

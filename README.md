@@ -77,7 +77,7 @@ Flags:
 | `--yes, -y` | Auto-confirm write/edit/bash tools (untrusts model + fetched content) |
 | `--max-iterations <n>` | Cap provider turns per message (use `>=2` for tool tasks) |
 | `--effort <level>` | Reasoning effort: off\|low\|medium\|high (best-effort) |
-| `--theme <name>` | Color theme: `amber` (**default**, warm polished look) \| `auto` (truecolor) \| `ansi` (Dark mode, ANSI colors only) \| `orange`. Session-only unless `--save` |
+| `--theme <name>` | Color theme: `clean`/`midnight` (**default**, cool-blue Tokyo Night) \| `amber`/`ember` (warm Gruvbox) \| `neon` (high-contrast Dracula) \| `blossom` (soft pastel Catppuccin) \| `auto`/`frost` (cool Nord) \| `ansi` (16-color safe) \| `orange` (alias look of amber). Session-only unless `--save` |
 | `--mcp {on,off}` | Enable/disable MCP servers (`~/.llmcode/mcp.json`). `off` starts no servers and sends no MCP tools — smaller prompt, faster tok/s. Session-only unless `--save` |
 | `--context N\|auto\|fixed\|off` | Working-context budget (~tokens). llmc-code auto-trims history to it after each turn so decode stays fast; adaptive (flexes per request) by default. Session-only unless `--save` |
 | `--private` | **Opt into the offline lockdown** for this session: no external egress (see below). Add `--save` to persist |
@@ -92,7 +92,8 @@ Flags:
 /models               List models available on the server
 /model <name>         Set the model (verified against the server's list)
 /effort <level>       Reasoning effort: off | low | medium | high (best-effort)
-/theme <name>         Color theme: amber (default) | auto | ansi | orange
+/theme <name>         Color theme: clean/midnight (default) | amber/ember | neon |
+                      blossom | auto/frost | ansi | orange
 /compact              Aggressively summarize ALL history into one tight note,
                       keeping only the last exchange (frees the most context)
 /context [N|auto|fixed|off]

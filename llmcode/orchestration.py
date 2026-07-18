@@ -66,6 +66,7 @@ def make_spawn_agent_tool(
     confirm_fn: Callable[[Tool, dict], bool] | None = None,
     code_theme: str = "monokai",
     accent: str | None = None,
+    palette=None,
     workspace: str | None = None,
     context_budget: int = 0,
     context_ceiling: int = 0,
@@ -160,8 +161,11 @@ def make_spawn_agent_tool(
             code_theme=code_theme,
             # Accent the sub-agent's footer/glyph to match the theme. The "▌
             # Answer" gutter stays OFF for sub-agents (its non-empty line_prefix
-            # disables it), so the bar never collides with the "↳" marker.
+            # disables it), so the bar never collides with the "↳" marker. The full
+            # palette rides along so the sub-agent's tool tree / activity line reach
+            # the semantic tokens and its spinner picks up the theme colour too.
             accent=accent,
+            palette=palette,
             # Don't print the sub-agent's full answer live: it is RETURNED to the
             # orchestrator, which renders it once. Without this the delegated
             # audit printed twice (sub-agent copy + orchestrator re-render). The

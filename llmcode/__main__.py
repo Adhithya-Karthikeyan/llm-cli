@@ -17,9 +17,10 @@ Flags:
   --output-format {text,json}  output rendering; session-only unless --save
   --no-checkpoints          disable pre-edit file snapshots for this session
   --git-autocommit          auto-commit each change for this session
-  --theme {amber,auto,ansi,orange} color theme; 'amber' (default) = warm polished
-                            look; 'ansi' = Dark mode (ANSI colors only);
-                            'orange' = orange-on-black (orange inline code, no box)
+  --theme <name>            color theme; 'clean'/'midnight' (default) = cool-blue
+                            Tokyo Night; 'amber'/'ember' = warm Gruvbox; 'auto'/
+                            'frost' = cool Nord; 'neon' = Dracula; 'blossom' =
+                            Catppuccin; 'ansi' = Dark mode (ANSI colors only)
   --mcp {on,off}            Enable/disable MCP servers (off = no MCP tools,
                             smaller/faster prompts). Session-only unless --save
   --save                    persist the given flags as the new default
@@ -106,10 +107,11 @@ def _parse_args(argv):
     )
     parser.add_argument(
         "--theme", choices=list(THEMES), default=None,
-        help="Color theme: amber (default, warm polished look) | auto (truecolor) "
-             "| ansi (Dark mode, ANSI colors only — uses your terminal's own "
-             "16-color palette) | orange (orange-on-black; orange inline code, no "
-             "box). Session-only unless --save.",
+        help="Color theme: clean/midnight (default, cool-blue Tokyo Night) | "
+             "amber/ember (warm Gruvbox) | orange (warm) | auto/frost (cool Nord) "
+             "| neon (Dracula) | blossom (Catppuccin) | ansi (Dark mode, ANSI "
+             "colors only — uses your terminal's own 16-color palette). "
+             "Session-only unless --save.",
     )
     # NETWORK is the DEFAULT (private=False): web_fetch on (SSRF-safe), run_bash
     # un-sandboxed, non-loopback base_url + all MCP servers allowed. --private

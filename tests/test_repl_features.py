@@ -132,6 +132,43 @@ def test_diff_preview_new_file_note(tmp_path, monkeypatch, capsys):
     assert "new file" in out
 
 
+def test_diff_preview_themed_render_is_ansi_free_when_piped(tmp_path, monkeypatch, capsys):
+    """Step 3: the diff preview now renders on the THEMED console with semantic
+    +/-/context tokens, but a piped/non-tty run (capsys) must stay byte-clean —
+    the text is present, with ZERO ANSI escapes, for a truecolor theme."""
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "sample.py"
+    f.write_text("x = 1\n", encoding="utf-8")
+    cfg = Config(diff_preview=True, theme="neon")  # a truecolor theme
+    confirm = r.make_ptk_confirm(_FakeSession(), cfg)
+    tool = get_tool("edit_file")
+    confirm(tool, {"path": str(f), "old": "x = 1", "new": "x = 42"})
+    out = capsys.readouterr().out
+    assert "-x = 1" in out and "+x = 42" in out  # the diff content is shown
+    assert "\x1b[" not in out  # …with no ANSI (byte-clean piped output)
+
+
+def test_confirm_header_and_diff_ansi_free_when_piped(tmp_path, monkeypatch, capsys):
+    """Step 6: the confirm now prints a themed "⏺ <tool> <path>" header ABOVE the
+    diff so the change belongs to the action. On a piped/non-tty run (capsys) the
+    whole preview must stay byte-clean: header + path + diff present, ZERO ANSI
+    escapes, even for a truecolor theme."""
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "sample.py"
+    f.write_text("x = 1\n", encoding="utf-8")
+    cfg = Config(diff_preview=True, theme="neon")  # a truecolor theme
+    confirm = r.make_ptk_confirm(_FakeSession(), cfg)
+    tool = get_tool("edit_file")
+    confirm(tool, {"path": str(f), "old": "x = 1", "new": "x = 42"})
+    out = capsys.readouterr().out
+    assert "⏺ edit_file" in out          # themed action header above the diff
+    assert "sample.py" in out             # header carries the path (basename)
+    assert "-x = 1" in out and "+x = 42" in out
+    # The header must sit ABOVE the diff, not below it.
+    assert out.index("⏺ edit_file") < out.index("-x = 1")
+    assert "\x1b[" not in out             # byte-clean piped output
+
+
 # --------------------------------------------------------------------------- #
 # Confirmation prompt: ghost-placeholder suppression + restore
 # --------------------------------------------------------------------------- #
@@ -147,7 +184,13 @@ def test_confirm_suppresses_ghost_placeholder():
     # Exactly one prompt was issued and it overrode the placeholder to empty
     # (empty string, NOT None — None is a no-op in prompt_toolkit).
     assert sess.placeholders == [""]
-    assert sess.prompts and sess.prompts[0].startswith("\nRun write_file")
+    # The prompt is now a themed FormattedText (warning ⚠ glyph + accent action
+    # label + default-fg "[y/N]"); flatten it to plain text to assert structure.
+    from prompt_toolkit.formatted_text import fragment_list_to_text
+    assert sess.prompts
+    plain = fragment_list_to_text(sess.prompts[0])
+    assert plain.startswith("\n")
+    assert "Run write_file" in plain and "[y/N]" in plain
 
 
 def test_confirm_restores_session_placeholder():
@@ -159,6 +202,35 @@ def test_confirm_restores_session_placeholder():
     tool = get_tool("write_file")
     confirm(tool, {"path": "hello.py", "content": "print('x')\n"})
     assert sess.placeholder == ghost
+
+
+def test_ansi_theme_warning_is_16_colour_not_truecolor_yellow():
+    # The ansi ThemeSpec's `warning` must be the explicit 16-colour ptk name
+    # "ansiyellow", not the bare "yellow" rich style — prompt_toolkit resolves
+    # bare "yellow" to truecolor #ffff00 when color_depth is forced to 24-bit,
+    # which would leak truecolor into the otherwise strictly-16-colour ansi
+    # theme's confirm ⚠ glyph.
+    from llmcode.repl import _SPECS, _resolve_theme
+
+    assert _SPECS[_resolve_theme("ansi")].warning == "ansiyellow"
+
+
+def test_ansi_theme_confirm_prompt_uses_ansiyellow_warning_style():
+    # The confirm y/N prompt colours its leading "⚠" glyph with pal.warning;
+    # for the ansi theme that must be the ptk 16-colour name, never a hex
+    # truecolor spelling.
+    from prompt_toolkit.formatted_text import fragment_list_to_text
+
+    sess = _FakeSession()
+    confirm = r.make_ptk_confirm(sess, Config(theme="ansi"))
+    tool = get_tool("write_file")
+    confirm(tool, {"path": "hello.py", "content": "print('x')\n"})
+    assert sess.prompts
+    fragments = sess.prompts[0]
+    warn_fragment = next(f for f in fragments if "⚠" in f[1] or "!" in f[1])
+    assert warn_fragment[0] == "ansiyellow"
+    assert "#" not in warn_fragment[0]  # never a truecolor hex spelling
+    assert fragment_list_to_text(fragments)  # sanity: still renders text
 
 
 def test_confirm_semantics_preserved():
@@ -406,6 +478,49 @@ def test_help_notes_shell_not_sandboxed(repl, capsys):
     out = capsys.readouterr().out
     assert "!<cmd>" in out
     assert "NOT sandboxed" in out
+
+
+def test_help_grouped_sections_and_network_subpage(repl, capsys):
+    """Step 6: /help renders grouped sections; the long NETWORK/SSRF prose moves
+    behind `/help network`. Default /help stays scannable + ANSI-free when piped."""
+    assert repl._dispatch_slash("/help") is True
+    out = capsys.readouterr().out
+    # Section titles present, default view no longer carries the SSRF prose.
+    for title in ("Core", "Model", "Context", "Git & files", "Tuning", "Themes"):
+        assert title in out, f"section {title} missing from /help"
+    assert "SSRF" not in out
+    assert "loopback-pinned" not in out
+    assert "Run /help network" in out       # pointer to the moved section
+    assert "\x1b[" not in out               # byte-clean piped output
+
+    # `/help network` surfaces the moved security prose.
+    assert repl._dispatch_slash("/help network") is True
+    net = capsys.readouterr().out
+    assert "SSRF" in net and "loopback-pinned" in net
+    assert "\x1b[" not in net
+
+
+def test_banner_degrades_glyphs_under_ascii_console(repl):
+    """Step 6: the banner ASCII-degrades its ◆/● glyphs on a console whose output
+    encoding can't represent them (LANG=C), instead of emitting mojibake — the
+    banner is the FIRST thing users see and previously had no such guard."""
+    import io
+    from rich.console import Console
+
+    class _AsciiFile(io.StringIO):
+        encoding = "ascii"
+
+    buf = _AsciiFile()
+    repl.console = Console(file=buf, force_terminal=False, width=80,
+                           markup=False, highlight=False)
+    # Precondition: this console genuinely cannot encode the banner glyphs.
+    assert r._enc_can(repl.console, "◆") is False
+    repl.config.model = "m"
+    repl._print_banner()
+    out = buf.getvalue()
+    assert "◆" not in out and "●" not in out   # un-encodable glyphs degraded away
+    assert "*" in out                          # ASCII diamond fallback used
+    assert "ready" in out
 
 
 # --------------------------------------------------------------------------- #

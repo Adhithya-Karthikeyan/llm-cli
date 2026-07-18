@@ -16,6 +16,7 @@ from llmcode.spinner import (
     DuckSpinner,
     Spinner,
     _frame,
+    _sgr,
 )
 
 
@@ -219,6 +220,104 @@ def test_live_timer_counts_up_with_injected_clock(monkeypatch):
         _time.sleep(0.005)
     sp.stop()
     assert "7s" in console.file.getvalue()
+
+
+# ----- theme colour: _sgr helper + gated glyph tinting --------------------
+
+def test_sgr_only_emits_truecolor_for_hex():
+    """_sgr returns a 24-bit SGR (prefix, reset) for a #rrggbb hex, and an empty
+    ('', '') for anything else — None, '', an ANSI name, or a malformed string —
+    so a non-hex spinner colour (e.g. the ansi theme) draws no SGR at all."""
+    pre, reset = _sgr("#7aa2f7")
+    assert pre == "\x1b[38;2;122;162;247m"
+    assert reset == "\x1b[0m"
+    # Everything non-hex opts out cleanly (never raises).
+    for bad in (None, "", "yellow", "ansiyellow", "#12", "#gggggg", "7aa2f7"):
+        assert _sgr(bad) == ("", "")
+
+
+def test_disabled_spinner_with_color_writes_no_sgr():
+    """A DISABLED spinner (non-tty / enabled=False) must emit ZERO SGR even when a
+    colour is set — the byte-clean piped-output guarantee. start()/stop() are
+    no-ops, so nothing (least of all a truecolor escape) is written."""
+    console = _FakeConsole(is_terminal=True)
+    sp = Spinner(console, enabled=False, color="#7aa2f7", timer_color="#565f89")
+    assert sp.enabled is False
+    sp.start()
+    sp.stop()
+    out = console.file.getvalue()
+    assert out == ""            # nothing written when disabled
+    assert "\x1b" not in out    # in particular, no SGR / ANSI at all
+
+
+def test_non_tty_colored_spinner_stays_ansi_free():
+    """The same guarantee via the real TTY gate: a non-terminal console disables
+    the spinner, so a colour set on it can never reach the (piped) stream."""
+    console = _FakeConsole(is_terminal=False)
+    sp = Spinner(console, color="#bd93f9", timer_color="#6272a4")
+    assert sp.enabled is False
+    with sp:
+        pass
+    assert console.file.getvalue() == ""
+
+
+def test_enabled_colored_spinner_wraps_glyph_in_truecolor_sgr(monkeypatch):
+    """An ENABLED (forced-tty) spinner with a #hex colour wraps ONLY the braille
+    glyph in a 38;2; truecolor SGR (and dims the timer), while a plain enabled
+    spinner emits none."""
+    import time as _time
+    import llmcode.spinner as sp_mod
+
+    monkeypatch.setattr(sp_mod, "_FPS_SLEEP", 0.001)
+    console = _FakeConsole(is_terminal=True)
+    sp = Spinner(console, enabled=True, color="#7aa2f7", timer_color="#565f89")
+    sp.start()
+    deadline = _time.time() + 1.0
+    while _time.time() < deadline and "\x1b[K" not in console.file.getvalue():
+        _time.sleep(0.005)
+    sp.stop()
+    out = console.file.getvalue()
+    # The glyph carries the accent truecolor SGR; the timer carries its own.
+    assert "\x1b[38;2;122;162;247m" in out   # glyph tint (#7aa2f7)
+    assert "\x1b[38;2;86;95;137m" in out     # timer tint (#565f89)
+    # The label/hint text still renders (line is not swallowed by the colour).
+    assert "working" in out and "ctrl-c to stop" in out
+
+
+def test_enabled_uncolored_spinner_emits_no_truecolor_sgr(monkeypatch):
+    """A plain enabled spinner (no colour) draws exactly as before: frames, but
+    NO truecolor SGR — only the historic \\r / erase-EOL / cursor control."""
+    import time as _time
+    import llmcode.spinner as sp_mod
+
+    monkeypatch.setattr(sp_mod, "_FPS_SLEEP", 0.001)
+    console = _FakeConsole(is_terminal=True)
+    sp = Spinner(console, enabled=True)  # no color
+    sp.start()
+    deadline = _time.time() + 1.0
+    while _time.time() < deadline and "\x1b[K" not in console.file.getvalue():
+        _time.sleep(0.005)
+    sp.stop()
+    out = console.file.getvalue()
+    assert "\x1b[K" in out          # frames drew
+    assert "38;2;" not in out       # but no truecolor tint anywhere
+
+
+def test_ansi_theme_color_produces_no_sgr_even_when_enabled(monkeypatch):
+    """An ANSI-name colour (the ansi theme leaves spinner empty; a name never
+    matches) yields no truecolor SGR — the spinner stays plain."""
+    import time as _time
+    import llmcode.spinner as sp_mod
+
+    monkeypatch.setattr(sp_mod, "_FPS_SLEEP", 0.001)
+    console = _FakeConsole(is_terminal=True)
+    sp = Spinner(console, enabled=True, color="", timer_color="")
+    sp.start()
+    deadline = _time.time() + 1.0
+    while _time.time() < deadline and "\x1b[K" not in console.file.getvalue():
+        _time.sleep(0.005)
+    sp.stop()
+    assert "38;2;" not in console.file.getvalue()
 
 
 def test_start_is_idempotent_while_alive(monkeypatch):

@@ -700,6 +700,7 @@ class Agent:
         context_soft_limit: int = 0,
         code_theme: str = "monokai",
         accent: str | None = None,
+        palette=None,
         gutter_char: str = "▌",
         context_budget: int = 0,
         context_ceiling: int = 0,
@@ -760,6 +761,14 @@ class Agent:
         # (empty line_prefix); a nested sub-agent ("  ↳ ") keeps plain Markdown so
         # the box never collides with its nesting marker.
         self.accent = accent or None
+        # Full theme Palette (repl.Palette) when the REPL threads it in — carries
+        # the SEMANTIC tokens (success/error), the muted grey, and the raw-stream
+        # spinner colours. None for sub-agents built directly / tests: the tool
+        # tree, footer, activity line, and spinner then fall back to the historic
+        # literal styles ("green"/"dim"/"dim red") and an uncoloured spinner, so
+        # byte-for-byte the old behaviour holds. Every use is gated so PIPED /
+        # non-terminal output stays ANSI-free regardless of the palette.
+        self.palette = palette
         # Retained for back-compat (threaded from the palette); the old left-bar
         # gutter glyph is no longer drawn now that answers use a thin box.
         self.gutter_char = gutter_char
@@ -1156,11 +1165,20 @@ class Agent:
             from rich import box as _box
             from rich.panel import Panel
 
+            # Answer box follows the active theme's box_style so it matches the
+            # banner (ember→HEAVY, neon→DOUBLE, frost→SIMPLE, …). Inlined getattr
+            # (NOT repl._box_for, which would be a circular import); a palette-less
+            # agent falls back to ROUNDED — byte-identical to the old behaviour.
+            _bx = getattr(
+                _box,
+                (getattr(self.palette, "box_style", "ROUNDED") or "ROUNDED").upper(),
+                _box.ROUNDED,
+            ) if self.palette else _box.ROUNDED
             self.console.print()  # breathing room above the answer box
             self.console.print(
                 Panel(
                     md,
-                    box=_box.ROUNDED,
+                    box=_bx,
                     border_style=self.accent,
                     padding=(0, 1),
                 )
@@ -1205,31 +1223,39 @@ class Agent:
             return
         speed = format_footer(rate)  # "47.9 tok/s"
         elapsed_s = f"{elapsed:.2f}s"
+        # Middle-dot separator matches the pinned status bar so the two read as
+        # the same object, but "·" (U+00B7) mojibakes to "?" on a non-UTF-8
+        # console (e.g. LANG=C piped output) — fall back to "|" there, same
+        # care as the spinner's _SEP/_SEP_ASCII pair.
+        sep = " · " if self._console_can_encode("·") else " | "
         if self.accent:
-            # Labels + separators stay dim; the values (model, time, rate) read in
-            # the accent colour — a lively footer instead of a uniform grey line.
+            # Labels + separators stay muted; the values (model, time, rate) read
+            # in the accent colour — a lively footer instead of a uniform grey line.
             # NOTE no base style on the Text (a "dim" base would layer onto the
-            # accent spans and mute them); each span carries its own style.
+            # accent spans and mute them); each span carries its own style. muted =
+            # the theme's grey when a palette is threaded, else "dim" (palette-less
+            # sub-agents / tests stay byte-identical).
             from rich.text import Text
 
+            muted = self.palette.dim if self.palette else "dim"
             line = Text(self.line_prefix)
             if model:  # omit the Model segment entirely when unknown (e.g. mock)
-                line.append("Model: ", style="dim")
+                line.append("Model: ", style=muted)
                 line.append(model, style=self.accent)
-                line.append(" | ", style="dim")
-            line.append("Time: ", style="dim")
+                line.append(sep, style=muted)
+            line.append("Time: ", style=muted)
             line.append(elapsed_s, style=self.accent)
-            line.append(" | ", style="dim")
-            line.append("Speed: ", style="dim")
+            line.append(sep, style=muted)
+            line.append("Speed: ", style=muted)
             num, _, unit = speed.partition(" ")
             line.append(num, style=self.accent)
             if unit:
-                line.append(" " + unit, style="dim")
+                line.append(" " + unit, style=muted)
             self.console.print(line)
         else:
             # Plain (piped/non-accent) fallback: same text, no styling — byte-clean.
-            model_seg = f"Model: {model} | " if model else ""
-            plain = f"{model_seg}Time: {elapsed_s} | Speed: {speed}"
+            model_seg = f"Model: {model}{sep}" if model else ""
+            plain = f"{model_seg}Time: {elapsed_s}{sep}Speed: {speed}"
             self.console.print(self.line_prefix + plain, style="dim")
 
     def _console_can_encode(self, s: str) -> bool:
@@ -1287,12 +1313,26 @@ class Agent:
             return
         from rich.text import Text
 
+        # Semantic tokens from the theme Palette when threaded in; else the
+        # historic literals so a palette-less agent (sub-agent built directly /
+        # tests) stays byte-for-byte identical. The head glyph matches the
+        # collapsed activity line: accent on success, error-red when this call
+        # failed (fixes the old always-green head vs red collapsed inconsistency).
+        pal = self.palette
+        head_style = (pal.error if is_error else pal.accent) if pal else "green"
+        check_style = pal.success if pal else "dim green"
+        conn_style = pal.dim if pal else "dim"
+        summary_style = (
+            (pal.error if is_error else pal.dim) if pal
+            else ("dim red" if is_error else "dim")
+        )
+
         head_glyph, conn_glyph = self._tree_glyphs()
         head = Text(self.line_prefix)
-        head.append(head_glyph, style="green")
+        head.append(head_glyph, style=head_style)
         head.append(tool_call_label(name, args))
-        # A SUCCESSFUL call gets a dim-green "✓" on the head line. TTY-gated (a
-        # real terminal only) so piped/scripted output — every test drives a
+        # A SUCCESSFUL call gets a "✓" (success token) on the head line. TTY-gated
+        # (a real terminal only) so piped/scripted output — every test drives a
         # non-terminal console — stays byte-for-byte identical. Failures keep the
         # existing "✗ ..." connector treatment below and get NO ✓.
         if (
@@ -1300,12 +1340,12 @@ class Agent:
             and bool(getattr(self.console, "is_terminal", False))
             and self._console_can_encode("✓")
         ):
-            head.append(" ✓", style="dim green")
+            head.append(" ✓", style=check_style)
         self.console.print(head, no_wrap=True, overflow="ellipsis")
 
         body = Text(self.line_prefix)
-        body.append(conn_glyph, style="dim")
-        body.append(connector, style="dim red" if is_error else "dim")
+        body.append(conn_glyph, style=conn_style)
+        body.append(connector, style=summary_style)
         self.console.print(body, no_wrap=True, overflow="ellipsis")
 
     def _record_detail(self, name, args, result, ok, elapsed) -> None:
@@ -1339,13 +1379,17 @@ class Agent:
         hint = "" if self.line_prefix else " · Ctrl+O to expand"
         head_glyph = self._tree_glyphs()[0]  # ⏺ (or ASCII "* ") — mojibake-safe
         if self.accent:
-            # Accent the "⏺" glyph (amber on success, red when any call failed)
-            # so the activity line reads at a glance; the rest stays dim.
+            # Accent the "⏺" glyph (accent on success, error-red when any call
+            # failed) so the activity line reads at a glance; the label stays muted.
+            # error/muted come from the theme Palette when threaded, else the
+            # historic "red"/"dim" literals (palette-less agents stay identical).
             from rich.text import Text
 
+            fail_style = self.palette.error if self.palette else "red"
+            muted = self.palette.dim if self.palette else "dim"
             line = Text(self.line_prefix)
-            line.append(head_glyph, style="red" if failed else self.accent)
-            line.append(f"{label}{hint}", style="dim")
+            line.append(head_glyph, style=fail_style if failed else self.accent)
+            line.append(f"{label}{hint}", style=muted)
             self.console.print(line)
         else:
             self.console.print(self.line_prefix + f"{head_glyph}{label}{hint}", style="dim")
@@ -1559,7 +1603,11 @@ class Agent:
         # TTY-only + self-erasing; disabled when the console is None or not a real
         # terminal, so non-TTY runs are byte-for-byte unchanged. STOPPED below
         # before ANY console write.
-        spinner = Spinner(self.console)
+        spinner = Spinner(
+            self.console,
+            color=self.palette.spinner if self.palette else None,
+            timer_color=self.palette.spinner_timer if self.palette else None,
+        )
         # Hold the provider iterator so the finally can close() it: on a break
         # (done) or KeyboardInterrupt the suspended generator is finalized here,
         # which runs the provider's own finally and deterministically releases its
@@ -2287,7 +2335,13 @@ class Agent:
                             # _permission_decision), so the y/N prompt is never
                             # glued to a spinner; stopped before printing anything.
                             t_tool = time.perf_counter()
-                            tool_spinner = Spinner(self.console)
+                            tool_spinner = Spinner(
+                                self.console,
+                                color=self.palette.spinner if self.palette else None,
+                                timer_color=(
+                                    self.palette.spinner_timer if self.palette else None
+                                ),
+                            )
                             tool_spinner.start()
                             try:
                                 result = tool.fn(args)
