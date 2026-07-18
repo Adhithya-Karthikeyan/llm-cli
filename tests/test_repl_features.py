@@ -527,13 +527,13 @@ def test_banner_degrades_glyphs_under_ascii_console(repl):
 # Startup block-letter wordmark (big "llmc-code") + its gating
 # --------------------------------------------------------------------------- #
 
-# A slice of the embedded half-block ('pagga') art — a glyph run no other banner
-# text emits (only the wordmark uses Block Elements), so its presence/absence
-# cleanly proves whether the big wordmark rendered. The gradient hero colours each
-# cell individually, so the raw ANSI stream splits the row with escapes; strip
-# ANSI first to check the underlying glyphs.
-_WORDMARK_MARK = "█▄█░█▀▀"          # the "m c" junction of the top row
-_WORDMARK_LL = "░█░░░█░░░"          # the leading "l l" strokes (top row)
+# A slice of the embedded solid-block (ANSI-Regular) art — a glyph run no other
+# banner text emits (only the wordmark uses the full block ``█``), so its
+# presence/absence cleanly proves whether the big wordmark rendered. The gradient
+# hero colours each cell individually, so the raw ANSI stream splits the row with
+# escapes; strip ANSI first to check the underlying glyphs.
+_WORDMARK_MARK = "██████  ██████  ██████"   # the "c o d" columns of the top row
+_WORDMARK_LL = "██      ██      ██"         # the leading "l l" strokes (top row)
 
 _ANSI_RE = __import__("re").compile(r"\x1b\[[0-9;]*m")
 
@@ -593,49 +593,25 @@ def test_banner_hero_badge_honest_offline_when_private(repl):
     assert "◆ core ready" in out
 
 
-def test_banner_returning_run_skips_wordmark(repl):
-    """On a subsequent launch (the ~/.llmcode/seen marker is present) the wide-tty
-    startup compresses to a two-line ribbon — no big wordmark, no verbose tail."""
+def test_banner_wordmark_shows_on_every_launch(repl):
+    """The full wordmark hero is the brand — it renders on EVERY wide-tty launch,
+    not just the first. Rendering twice in a row must show the big wordmark BOTH
+    times (there is no "seen" marker / returning-run compression any more)."""
     import io
-    import os
     from rich.console import Console
 
-    # Simulate a prior first-run by writing the marker (HOME is the tmp fixture).
-    marker = os.path.expanduser("~/.llmcode/seen")
-    os.makedirs(os.path.dirname(marker), exist_ok=True)
-    with open(marker, "w", encoding="utf-8") as fh:
-        fh.write("1")
-
-    buf = io.StringIO()
-    repl.console = Console(file=buf, force_terminal=True, width=100,
-                           color_system="truecolor")
-    repl.config.private = True
-    repl.config.model = "qwen/qwen3.6-35b-a3b"
-    repl._print_banner()
-    out = buf.getvalue()
-    flat = _strip_ansi(out)
-    assert _WORDMARK_MARK not in flat          # big wordmark skipped
-    assert _WORDMARK_LL not in flat
-    assert "◆ llmc-code" in out                # compressed ribbon shown
-    assert "qwen3.6-35b-a3b" in out
-    assert "◈ offline" in out
-
-
-def test_banner_first_run_writes_marker(repl):
-    """The first-run hero writes the ~/.llmcode/seen marker so the NEXT launch
-    takes the compressed path."""
-    import io
-    import os
-    from rich.console import Console
-
-    marker = os.path.expanduser("~/.llmcode/seen")
-    assert not os.path.exists(marker)          # fresh HOME -> first run
-    buf = io.StringIO()
-    repl.console = Console(file=buf, force_terminal=True, width=100,
-                           color_system="truecolor")
-    repl.config.model = "m"
-    repl._print_banner()
-    assert os.path.exists(marker)              # marker now recorded
+    for _ in range(2):                         # simulate first + subsequent launch
+        buf = io.StringIO()
+        repl.console = Console(file=buf, force_terminal=True, width=100,
+                               color_system="truecolor")
+        repl.config.private = True
+        repl.config.model = "qwen/qwen3.6-35b-a3b"
+        repl._print_banner()
+        flat = _strip_ansi(buf.getvalue())
+        assert _WORDMARK_MARK in flat          # big wordmark shown every launch
+        assert _WORDMARK_LL in flat
+        assert "◆ core ready" in flat          # full hero ribbon (not a compact ribbon)
+        assert "◈ offline · no egress" in flat
 
 
 def test_banner_narrow_terminal_falls_back_to_compact(repl):
@@ -646,7 +622,7 @@ def test_banner_narrow_terminal_falls_back_to_compact(repl):
     from rich.console import Console
 
     buf = io.StringIO()
-    # Width below _WORDMARK_WIDTH (56): the wordmark gate must reject this.
+    # Width below _WORDMARK_WIDTH (73): the wordmark gate must reject this.
     repl.console = Console(file=buf, force_terminal=True, width=40,
                            color_system="truecolor")
     assert repl.console.size.width < r._WORDMARK_WIDTH

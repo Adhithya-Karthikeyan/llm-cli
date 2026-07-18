@@ -432,31 +432,33 @@ def _bar_cwidth(fragments) -> int:
 # --------------------------------------------------------------------------- #
 # Startup wordmark
 # --------------------------------------------------------------------------- #
-# STATIC, pre-rendered "llmc-code" wordmark — a fine half-block logotype (figlet
-# 'pagga' style), embedded verbatim so we ship ZERO figlet dependency (deps stay
-# tiny). Three compact rows, 36 columns wide. This deliberately replaces the old
-# heavy ANSI-Shadow "wall of █" with a sleeker, high-resolution mark: solid
-# ``█`` strokes lifted by ``▀``/``▄`` half-blocks and a soft ``░`` light-shade
-# field, so the per-cell diagonal gradient reads like a premium foil logotype
-# rather than blocky retro art. Every glyph is from the Block Elements range
-# (``█ ▀ ▄ ░`` — the most universally-supported non-ASCII set in terminals).
+# STATIC, pre-rendered "llmc-code" wordmark — a clean ANSI-Regular logotype,
+# embedded verbatim so we ship ZERO figlet dependency (deps stay tiny). Five rows
+# of SOLID ``█`` strokes on a plain SPACE field — NO ``░`` light-shade (it renders
+# as ugly checkerboard noise on real terminals) and NO ``▀``/``▄`` half-block
+# shadow. The per-cell diagonal gradient does the visual lift, so the mark reads
+# like a crisp foil logotype instead of blocky retro art. The only non-ASCII glyph
+# is the full block ``█`` (Block Elements range — the most universally-supported
+# non-ASCII set in terminals).
 #
 # Shown ONLY on a wide, UTF-8-capable real terminal — every other context
 # (narrow tty, piped/non-tty, LANG=C console) falls back to the compact framed
 # banner, so narrow/scripted/legacy runs never see broken art or stray ANSI.
-# Regenerate via `pyfiglet -f pagga "llmc-code"` (throwaway; NOT a dep) if the
-# product name ever changes; keep _WORDMARK_GLYPHS covering every glyph used.
+# Regenerate via `pyfiglet -f ANSI_Regular "llmc-code"` (throwaway; NOT a dep) if
+# the product name ever changes; keep _WORDMARK_GLYPHS covering every glyph used.
 _WORDMARK = (
-    "░█░░░█░░░█▄█░█▀▀░░░░░█▀▀░█▀█░█▀▄░█▀▀\n"
-    "░█░░░█░░░█░█░█░░░▄▄▄░█░░░█░█░█░█░█▀▀\n"
-    "░▀▀▀░▀▀▀░▀░▀░▀▀▀░░░░░▀▀▀░▀▀▀░▀▀░░▀▀▀"
+    "██      ██      ███    ███  ██████        ██████  ██████  ██████  ███████\n"
+    "██      ██      ████  ████ ██            ██      ██    ██ ██   ██ ██\n"
+    "██      ██      ██ ████ ██ ██      █████ ██      ██    ██ ██   ██ █████\n"
+    "██      ██      ██  ██  ██ ██            ██      ██    ██ ██   ██ ██\n"
+    "███████ ███████ ██      ██  ██████        ██████  ██████  ██████  ███████"
 )
-# Minimum terminal width to render the hero. The art itself is only 36 cols, but
-# we require a generous margin so a compact terminal falls back to the framed
-# banner (a cramped hero reads worse than the clean compact one). 56 comfortably
-# rejects ~40-col terminals and accepts the common 80+ col case.
-_WORDMARK_WIDTH = 56
-_WORDMARK_GLYPHS = "█▀▄░"       # encoding-guard probe: every block glyph the art uses
+# Minimum terminal width to render the hero: the widest art line (73 cols). A
+# terminal narrower than the mark falls back to the compact framed banner (a
+# wrapped/cramped hero reads worse than the clean compact one). 73 rejects
+# ~40-col terminals and accepts the common 80+ col case.
+_WORDMARK_WIDTH = 73
+_WORDMARK_GLYPHS = "█"          # encoding-guard probe: the only block glyph the art uses
 
 
 def _hex_to_rgb(token) -> tuple[int, int, int] | None:
@@ -1801,12 +1803,12 @@ class Repl:
 
     def _print_banner(self) -> None:
         """Startup banner. On a wide, UTF-8-capable terminal it opens with the
-        sleek half-block ``llmc-code`` wordmark hero for a strong first impression;
-        on a narrow, piped/non-tty, or LANG=C console it falls back to the compact
+        full ``llmc-code`` wordmark hero — the brand — on EVERY launch; on a
+        narrow, piped/non-tty, or LANG=C console it falls back to the compact
         framed banner (provider/model + a green ``ready`` dot + theme/privacy
-        line). The first-run hero folds the privacy posture into its ribbon badge
-        and closes with ONE affordance line; the compact fallback prints the
-        shared privacy + single-hint footer.
+        line). The hero folds the privacy posture into its ribbon badge and closes
+        with ONE affordance line; the compact fallback prints the shared privacy +
+        single-hint footer.
 
         Gating the wordmark on ALL of {real terminal, enough width, encodable
         glyphs} guarantees narrow terminals, piped/non-tty runs (byte-clean,
@@ -1818,74 +1820,17 @@ class Repl:
             and _enc_can(self.console, _WORDMARK_GLYPHS)
         )
         if show_wordmark:
-            # Returning-run compression (fixes audit #2): once the first-run hero
-            # has been seen (a ~/.llmcode/seen marker), subsequent launches collapse
-            # to a two-line ribbon + prompt — fast entry, no wall of text. First run
-            # shows the full hero (wordmark + tagline + ribbon + tail) then writes
-            # the marker. Only the wide-tty wordmark path branches on the marker;
-            # piped/narrow/LANG=C stays the unchanged compact/clean path below.
-            if self._seen_before():
-                self._print_returning_ribbon(pal)
-            else:
-                # Calm first-run rhythm: wordmark -> tagline -> ribbon (which
-                # CARRIES the honest privacy badge) -> ONE affordance line. No
-                # duplicate "/help" hints, no separate privacy paragraph.
-                self._print_wordmark_header(pal)
-                self.console.print()            # gap: ribbon -> hint
-                self._print_startup_hint(pal)   # the single affordance line
-                self.console.print()            # trailing breathing room
-                self._mark_seen()
+            # The wordmark hero is the brand — show it in FULL on EVERY launch (no
+            # "seen" marker, no returning-run compression). Calm rhythm: wordmark ->
+            # tagline -> ribbon (which CARRIES the honest privacy badge) -> ONE
+            # affordance line. No duplicate "/help" hints, no separate privacy para.
+            self._print_wordmark_header(pal)
+            self.console.print()            # gap: ribbon -> hint
+            self._print_startup_hint(pal)   # the single affordance line
+            self.console.print()            # trailing breathing room
         else:
             self._print_compact_header(pal)   # the historic framed banner (fallback)
             self._print_banner_tail(pal)
-
-    def _seen_marker_path(self) -> str:
-        """Path to the first-run marker in the app config dir (``~/.llmcode/seen``)."""
-        return os.path.expanduser("~/.llmcode/seen")
-
-    def _seen_before(self) -> bool:
-        """True when a prior run already showed the first-run hero. Best-effort:
-        an unreadable dir reads as first-run (never crashes startup)."""
-        try:
-            return os.path.exists(self._seen_marker_path())
-        except OSError:
-            return False
-
-    def _mark_seen(self) -> None:
-        """Record that the first-run hero has been shown (best-effort). An
-        unwritable config dir is swallowed — the user just keeps the first-run
-        look, we never error on startup."""
-        try:
-            path = self._seen_marker_path()
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8") as fh:
-                fh.write("1")
-        except OSError:
-            pass
-
-    def _print_returning_ribbon(self, pal) -> None:
-        """Compressed returning-run startup: a single ``◆ llmc-code  <model>
-        <badge>   /help · @ files`` ribbon (the prompt is the second line). Skips
-        the big wordmark + verbose teaser/footer. Same tty/encoding gates as the
-        hero; ◆/◈ degrade to */# on a legacy console."""
-        from rich.text import Text
-
-        core = pal.banner_glyph if _enc_can(self.console, pal.banner_glyph) else "*"
-        lock = "◈" if _enc_can(self.console, "◈") else "#"
-        short_model = (self.config.model or "").rsplit("/", 1)[-1]
-        line = Text()
-        line.append(core + " llmc-code", style=pal.accent)
-        line.append("   ")
-        if short_model:
-            line.append(short_model, style=pal.bright)
-            line.append("   ")
-        # Honest lock badge: only claim offline when private mode is on.
-        line.append(lock + (" offline" if self.config.private else " local"),
-                    style=pal.success)
-        line.append("      ")
-        line.append("/help · @ files", style=pal.dim)
-        self.console.print()
-        self.console.print(line)
 
     def _core_caret_message(self, pal):
         """FormattedText for the ``◆ ❯`` core-caret input prompt.
