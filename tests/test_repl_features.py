@@ -524,6 +524,81 @@ def test_banner_degrades_glyphs_under_ascii_console(repl):
 
 
 # --------------------------------------------------------------------------- #
+# Startup block-letter wordmark (big "llmc-code") + its gating
+# --------------------------------------------------------------------------- #
+
+# A row of the embedded ANSI-Shadow art — a substring no other banner text emits,
+# so its presence/absence cleanly proves whether the big wordmark rendered.
+_WORDMARK_MARK = "╚══════╝╚══════╝"
+
+
+def test_banner_wordmark_on_wide_truecolor_tty(repl):
+    """A wide, UTF-8-capable real terminal opens with the bold block-letter
+    ``llmc-code`` wordmark (bigger first impression than the compact frame)."""
+    import io
+    from rich.console import Console
+
+    buf = io.StringIO()   # UTF-8 StringIO -> _enc_can("█…") is True
+    repl.console = Console(file=buf, force_terminal=True, width=100,
+                           color_system="truecolor")
+    assert getattr(repl.console, "is_terminal", False) is True
+    assert repl.console.size.width >= r._WORDMARK_WIDTH
+    repl.config.theme = "neon"
+    repl.config.model = "qwen/qwen3.6-35b-a3b"
+    repl._print_banner()
+    out = buf.getvalue()
+    # A distinctive wordmark row is present, and the short model shows in the
+    # compact info line that replaces the framed head/sub.
+    assert _WORDMARK_MARK in out
+    assert "██████" in out                 # block glyphs actually rendered
+    assert "qwen3.6-35b-a3b" in out
+    assert "theme neon" in out
+    assert "\x1b[" in out                  # a real tty is styled (ANSI present)
+
+
+def test_banner_narrow_terminal_falls_back_to_compact(repl):
+    """A terminal narrower than the wordmark falls back to the compact framed
+    banner — no big art (which would wrap and break) — while still showing the
+    model + ready + the framed 'llmc-code' title."""
+    import io
+    from rich.console import Console
+
+    buf = io.StringIO()
+    # Width below _WORDMARK_WIDTH (74): the wordmark gate must reject this.
+    repl.console = Console(file=buf, force_terminal=True, width=40,
+                           color_system="truecolor")
+    assert repl.console.size.width < r._WORDMARK_WIDTH
+    repl.config.model = "m"
+    repl._print_banner()
+    out = buf.getvalue()
+    assert _WORDMARK_MARK not in out       # NO big wordmark on a narrow terminal
+    assert "██████" not in out             # no block art at all
+    assert "llmc-code" in out              # compact framed banner (its title) shown
+    assert "ready" in out
+
+
+def test_banner_non_terminal_no_wordmark_and_ansi_free(repl):
+    """A non-terminal/piped console prints NO big wordmark and stays byte-clean
+    (ANSI-free) — the piped-output guarantee scripts/tests rely on."""
+    import io
+    from rich.console import Console
+
+    buf = io.StringIO()
+    # force_terminal=False + a generous width: even though it is wide enough, a
+    # non-tty console must NOT get the wordmark (is_terminal gate) and must emit
+    # no ANSI at all.
+    repl.console = Console(file=buf, force_terminal=False, width=120)
+    assert getattr(repl.console, "is_terminal", False) is False
+    repl.config.model = "m"
+    repl._print_banner()
+    out = buf.getvalue()
+    assert _WORDMARK_MARK not in out       # no big art off a real terminal
+    assert "██████" not in out
+    assert "\x1b[" not in out              # byte-clean, ANSI-free (piped guarantee)
+    assert "ready" in out                  # compact banner content still present
+
+
+# --------------------------------------------------------------------------- #
 # /undo is session-scoped
 # --------------------------------------------------------------------------- #
 

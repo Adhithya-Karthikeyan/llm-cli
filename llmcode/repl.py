@@ -401,6 +401,28 @@ def _box_for(name: str):
     return getattr(box, (name or "ROUNDED").upper(), box.ROUNDED)
 
 
+# --------------------------------------------------------------------------- #
+# Startup wordmark
+# --------------------------------------------------------------------------- #
+# STATIC, pre-rendered "llmc-code" block wordmark (figlet 'ANSI Shadow' style),
+# embedded verbatim so we ship ZERO figlet dependency (deps stay tiny). Six rows;
+# widest line is 74 columns (measured). It is shown ONLY on a wide, UTF-8-capable
+# real terminal — every other context (narrow tty, piped/non-tty, LANG=C console)
+# falls back to the compact framed banner, so narrow/scripted/legacy runs never
+# see broken art or stray ANSI. Regenerate via scratchpad/gen_wordmark.py if the
+# product name ever changes; keep _WORDMARK_WIDTH in sync with the widest line.
+_WORDMARK = (
+    "██╗     ██╗     ███╗   ███╗ ██████╗       ██████╗ ██████╗ ██████╗ ███████╗\n"
+    "██║     ██║     ████╗ ████║██╔════╝      ██╔════╝██╔═══██╗██╔══██╗██╔════╝\n"
+    "██║     ██║     ██╔████╔██║██║     █████╗██║     ██║   ██║██║  ██║█████╗  \n"
+    "██║     ██║     ██║╚██╔╝██║██║     ╚════╝██║     ██║   ██║██║  ██║██╔══╝  \n"
+    "███████╗███████╗██║ ╚═╝ ██║╚██████╗      ╚██████╗╚██████╔╝██████╔╝███████╗\n"
+    "╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝       ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝"
+)
+_WORDMARK_WIDTH = 74            # widest wordmark line (measured) — gate tty width on this
+_WORDMARK_GLYPHS = "█╗║═╝╚╔"    # encoding-guard probe: every block/box char the art uses
+
+
 def make_ptk_confirm(session, config=None):
     """A prompt_toolkit-compatible y/N confirm_fn (no builtin input()).
 
@@ -1704,14 +1726,78 @@ class Repl:
         self.console.print(_HELP_FOOTER, style=pal.dim)
 
     def _print_banner(self) -> None:
-        """Framed startup banner: provider/model, a green 'ready' dot, and a
-        compact theme/privacy line — replacing the old flat one-liner."""
+        """Startup banner. On a wide, UTF-8-capable terminal it opens with a bold
+        block-letter ``llmc-code`` wordmark for a strong first impression; on a
+        narrow, piped/non-tty, or LANG=C console it falls back to the compact
+        framed banner (provider/model + a green ``ready`` dot + theme/privacy
+        line). Both paths then print the shared privacy/help/first-run footer.
+
+        Gating the wordmark on ALL of {real terminal, enough width, encodable
+        glyphs} guarantees narrow terminals, piped/non-tty runs (byte-clean,
+        ANSI-free), and legacy consoles never see broken art."""
+        pal = palette_for(self.config.theme)
+        show_wordmark = (
+            getattr(self.console, "is_terminal", False)
+            and self.console.size.width >= _WORDMARK_WIDTH
+            and _enc_can(self.console, _WORDMARK_GLYPHS)
+        )
+        if show_wordmark:
+            self._print_wordmark_header(pal)
+        else:
+            self._print_compact_header(pal)   # the historic framed banner (fallback)
+        self._print_banner_tail(pal)
+
+    def _print_wordmark_header(self, pal) -> None:
+        """Bold ANSI-Shadow ``llmc-code`` wordmark + one tight info line.
+
+        Only reached for a wide UTF-8 terminal (see ``_print_banner`` gating). The
+        art is centered and two-toned top-to-bottom (``pal.accent`` over
+        ``accent_secondary``/``bright``); a single compact line (model · ready ·
+        theme · privacy) replaces the framed head/sub of the compact banner. One
+        blank line of breathing room sits above and below the art."""
+        from rich.align import Align
+        from rich.text import Text
+
+        lower = getattr(pal, "accent_secondary", pal.bright)  # Palette may lack it
+        lines = _WORDMARK.split("\n")
+        n = len(lines)
+        art = Text(no_wrap=True)
+        for i, line in enumerate(lines):
+            color = pal.accent if i < n // 2 else lower  # upper rows accent, lower two-tone
+            art.append(line, style=f"bold {color}")
+            if i < n - 1:
+                art.append("\n")
+        self.console.print()          # breathing room above the wordmark
+        # Align.center (not Text.justify) is what actually centers a renderable
+        # block against the terminal width — the same idiom the compact banner
+        # uses for its panel. Every art line is the same width, so they stay aligned.
+        self.console.print(Align.center(art))
+        self.console.print()          # breathing room below the wordmark
+        # One tight info line stands in for the compact banner's framed head/sub.
+        ready_dot = pal.ready_glyph if _enc_can(self.console, pal.ready_glyph) else "o"
+        short_model = (self.config.model or "").rsplit("/", 1)[-1]
+        info = Text()
+        info.append(short_model, style=pal.bright)   # make the model pop
+        info.append("   ")
+        info.append(ready_dot + " ", style=pal.success)
+        info.append("ready", style=pal.dim)
+        info.append("   ·   ", style=pal.dim)
+        info.append(f"theme {self.config.theme}", style=pal.dim)
+        info.append("   ·   ", style=pal.dim)
+        info.append("private on" if self.config.private else "private off",
+                    style=pal.dim)
+        self.console.print(info, justify="center")
+
+    def _print_compact_header(self, pal) -> None:
+        """The compact framed banner (fallback path): a boxed provider/model +
+        green ``ready`` dot ``head`` over a muted theme/privacy/mcp/gentle
+        ``sub`` line, centered. Kept intact as the guaranteed-safe banner for
+        narrow/piped/legacy consoles."""
         from rich.align import Align
         from rich.console import Group
         from rich.panel import Panel
         from rich.text import Text
 
-        pal = palette_for(self.config.theme)
         # Per-theme banner glyphs (◆/❋ head, ● ready dot). ASCII-degrade them via
         # the same encoding guard the tool tree uses so a legacy/ASCII console
         # (LANG=C) shows "*"/"o" instead of "?" mojibake — the banner is the FIRST
@@ -1749,6 +1835,12 @@ class Repl:
             title="llmc-code", title_align="left", padding=(0, 1),
             expand=False,  # hug the content instead of spanning the full width
         )))
+
+    def _print_banner_tail(self, pal) -> None:
+        """Shared banner footer for BOTH paths: the privacy posture, the /help
+        hint, a first-run example (tty only), and trailing breathing room. Piped/
+        non-tty runs stay byte-clean — the console emits no ANSI off a real
+        terminal and the example line is tty-gated."""
         # Keep the privacy posture visible on startup (security transparency),
         # compact and dim under the frame.
         # Kept short enough to fit ~80 cols without wrapping under the frame.
